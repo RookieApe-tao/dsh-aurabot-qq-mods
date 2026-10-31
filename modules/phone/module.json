@@ -1,0 +1,8 @@
+{
+  "id": "phone", "name": "手机逛逛", "version": "0.1.0",
+  "description": "通过 ADB 操控 Android 手机：按主人教好的流程自动签到/浏览/点赞，或自由推理完成一句话任务",
+  "category": "platform", "tags": ["adb", "手机", "自动化"],
+  "author": "Aurabot", "license": "MIT", "api": 1,
+  "minPluginVersion": "1.2.0", "requires": [],
+  "capabilities": ["network", "filesystem", "process", "plugin-config", "plugin-internals"]
+}

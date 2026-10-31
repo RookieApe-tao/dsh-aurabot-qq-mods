@@ -1,7 +1,164 @@
 {
   "schema": 1,
-  "assetsBase": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq-mods/releases/download/",
-  "modules": [],
+  "assetsBase": "https://github.com/RookieApe-tao/dsh-aurabot-qq-mods/releases/download/",
+  "modules": [
+    {
+      "id": "douyin",
+      "name": "刷抖音",
+      "version": "2.0.4",
+      "description": "用专用浏览器刷抖音：看推荐、点赞评论，把好玩的视频分享给主人，也能看别人发来的抖音链接。",
+      "category": "platform",
+      "tags": [
+        "抖音",
+        "短视频"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
+      "tag": "douyin-v2.0.4",
+      "file": "douyin-v2.0.4.zip",
+      "path": "douyin-v2.0.4/douyin-v2.0.4.zip",
+      "size": 42472,
+      "sha256": "55370e1e967c1e4e38b8ade27de3cd143118c5e605e21f1ec15b2f3077a0bd7d",
+      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
+      "publishedAt": "2026-10-31T08:28:54.819Z"
+    },
+    {
+      "id": "group-admin",
+      "name": "群管",
+      "version": "1.0.2",
+      "description": "主人开口时帮忙管群：禁言、解禁、踢人、改头衔、发公告。她也知道自己在群里有没有管理权限。",
+      "category": "manage",
+      "tags": [
+        "群管"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
+      "tag": "group-admin-v1.0.2",
+      "file": "group-admin-v1.0.2.zip",
+      "path": "group-admin-v1.0.2/group-admin-v1.0.2.zip",
+      "size": 4003,
+      "sha256": "2b66c5826ee257963a9681f4d3c8c46afee6d61425d4255d3f0062030aa14c81",
+      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
+      "publishedAt": "2026-10-31T08:28:54.819Z"
+    },
+    {
+      "id": "heybox",
+      "name": "刷小黑盒",
+      "version": "1.1.2",
+      "description": "用主人的账号逛小黑盒：看帖子和热评，点赞、评论、发帖。支持谷时逛、扫码登录和浏览器验证。",
+      "category": "platform",
+      "tags": [
+        "小黑盒",
+        "游戏"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
+      "tag": "heybox-v1.1.2",
+      "file": "heybox-v1.1.2.zip",
+      "path": "heybox-v1.1.2/heybox-v1.1.2.zip",
+      "size": 44856,
+      "sha256": "14a39a314e6da95c6d26fc7821be47fd6a1836e8ab39aa0fe444976c39137d5d",
+      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
+      "publishedAt": "2026-10-31T08:28:54.819Z"
+    },
+    {
+      "id": "pet",
+      "name": "桌宠",
+      "version": "1.0.2",
+      "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
+      "category": "desktop",
+      "tags": [
+        "桌宠"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "dynamic-code",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
+      "tag": "pet-v1.0.2",
+      "file": "pet-v1.0.2.zip",
+      "path": "pet-v1.0.2/pet-v1.0.2.zip",
+      "size": 143867,
+      "sha256": "0734c23d3d4c1b4202adf44bf9a35057233c9e15e2554f6f5f947445f1956c57",
+      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
+      "publishedAt": "2026-10-31T08:28:54.819Z"
+    },
+    {
+      "id": "tieba-reader",
+      "name": "逛贴吧（只读）",
+      "version": "1.5.0",
+      "description": "只读搜索和浏览贴吧，也可按兴趣向主人私聊分享。",
+      "category": "platform",
+      "tags": [
+        "贴吧",
+        "只读"
+      ],
+      "author": "GitNekopedia",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "dynamic-code",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "tieba-reader-v1.5.0",
+      "file": "tieba-reader-v1.5.0.zip",
+      "path": "tieba-reader-v1.5.0/tieba-reader-v1.5.0.zip",
+      "size": 125972,
+      "sha256": "5bae45ed881f062c932186df4342ebc98c5e6d7fc635d917fd5e00b3334dca63",
+      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
+      "publishedAt": "2026-10-31T08:28:54.819Z"
+    }
+  ],
   "revoked": [],
-  "generatedAt": "2026-10-30T11:26:47.020Z"
+  "generatedAt": "2026-10-31T08:28:54.819Z"
 }

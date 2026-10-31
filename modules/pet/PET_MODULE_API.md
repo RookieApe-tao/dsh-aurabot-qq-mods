@@ -41,6 +41,9 @@
 | POST | `/focus` | body `{enabled, source?}` → 写 focus.json + 广播 `focus` 事件（唤醒长轮询） |
 | POST | `/bubble` | body `{text, modality?, force?, anim?}`：测试气泡，默认 `force=true`（绕过专注模式）；`anim` 点播动作 |
 | POST | `/whisper` | body 可空。**碎碎念**：立即让她嘟囔一句（走 `/whisper` 的完整流程：现想/文案池 → 碎碎念动画 → 气泡）。force 只跳排程与开关，仍尊重专注模式；桌宠离线或载体=桌宠且开启暂停时拒绝 |
+| POST | `/chat` | **对话框**（§4.4）：body `{text}`。闸门顺序 开关→插件→桌宠在线→专注→并发锁（`petChatBusy`）→关键字拦截。命中关键字回 `{ok:true, closed:true}` 并广播 `chatClose`；正常回 `{ok, text, viaWindow, messageId}`——对话框开着（客户端 `/chat/state` 上报过）回复走 `chat` 事件，窗被关改走碎碎念气泡。**永不发 QQ** |
+| GET | `/chat/history?limit=50` | 对话框历史（服务端截断后下发最近 N 条 `{ts,role,text}[]`，只存桌宠本地） |
+| POST | `/chat/state` | 客户端上报：body `{open?, hotkey?('registered'\|'failed'\|'unconfigured'), hotkeyKey?}`。对话框开合（决定回复走事件还是气泡）+ 快捷键注册状态（`/status.chat.hotkeyState` 回显） |
 | GET | `/work` | `{work:{state, task, at, label, text}}`：她此刻在干什么（thinking/working/result/waiting/success/error），`text` 是收尾那句提醒 |
 | POST | `/playback` | body `{playbackId, anim?, status}`：客户端播完点播动画的上报回执（P2），登记进 `/history` |
 | GET | `/packs` | `{active, packs:[{name, hasConfig, anims[]}]}`：形象包扫描结果（P4，面板列包用） |
@@ -72,6 +75,8 @@
 - `{"type":"focus","enabled":bool}`（专注开关）
 - `{"type":"pack","pack":"fish"}`（形象包切换）
 - `{"type":"work","state":"thinking|working|result|waiting|success|error|null","task":"改桌宠气泡","label":"思考中","text":"「改桌宠气泡」搞定啦！","bubble":true,"notify":true}`（干活状态；`null` = 回空闲）。客户端按 `state` 切动画，`success`/`error` 时用 `text` 弹气泡 + 发系统通知（`bubble`/`notify` 是面板开关的判定结果，客户端只照做）。
+- `{"type":"chat","text":"…","messageId":"…","windowOpen":true}`（对话框回复；`messageId` 与 `POST /chat` 响应同源，客户端去重）
+- `{"type":"chatClose"}`（关键字命中 → 客户端关对话框）
 
 事件队列纯内存（≤200 条，重启即丢）；`bootId` 每次插件重启换新，客户端发现变了要重取水位。
 
@@ -230,7 +235,29 @@ pet.dispatch({ text, modality?, purpose?, force?, anim? })
 | `behaviorWindowWhitelist` | 空 | 窗口动作白名单（标题关键词，逗号/换行分隔；空=不额外放行） |
 | `petReleaseLand` | true | 松手后落地：开 = 拖动松手后按甩出速度抛出去、落回屏幕底部；关 = 松手停在哪就在哪（不抛也不落）。坏值一律当开 |
 
+### 4.4 对话框（petChat：主人找她聊的小窗；设计稿 docs/PET-CHAT-DESIGN.md）
+
+与碎碎念（自言自语）、聊天联动（QQ 消息触发小动作）是三码事：主人从客户端快捷键 / 右键菜单 / 托盘
+唤出对话小窗发文字，她按「主人私聊」同款语义回答。**永不发 QQ**，不支持图片。
+
+- **回合归属**：独立后台回合 `api.think(prompt, { key:'petChat', noTools })`，工作区单独成条
+  （`桌宠 · 对话框（主人找她聊）`），与碎碎念 / behavior / chatBehavior 互不抢会话；并发锁独立
+  （`petChatBusy`），上一句没答完拒收新句（客户端提示「她在想上一句」）。
+- **记忆走私聊主人模式**：读用 `memory.recallHint`（合成 `{kind:'private', userId:ownerQQ}` 上下文，
+  about 归主人、弱命中用上一句兜底、强化遗忘曲线）；写靠回复末尾模型自标的 `[记] 一句话` 标记 →
+  `memory.add({ about: ownerQQ, source:'pet', tags:['对话框'] })`。memory 模块不在 → 不带记忆直接答，绝不挂。
+- **多轮上下文兜底**：prompt 附 `chat/history.jsonl` 最近 8 条；历史每行 `{ts,role,text}` 追加写，
+  上限 `petChatMaxEntries`（头部截断），保留 `petChatRetentionDays` 天（0=永久），三者共用同一把锁。
+- **客户端**（`chat.html` + main.js）：全局快捷键单键 toggle（`globalShortcut`，注册失败=被占用 →
+  状态 `failed` 上报面板回显、气泡提醒一次、功能保持关闭）；Esc / 失焦（可关）/ 关键字三种关法；
+  窗关后回复自动改走碎碎念气泡。
+- 配置键：`petChatEnabled / petChatHotkey / petChatCloseKeyword / petChatBlurHide / petChatMaxEntries / petChatRetentionDays`。
+- **天气**（一期，服务端）：`petWeatherCity` 留空整块静默；接口 `petWeatherUrl`（`{city}` 模板，
+  留空用内置 wttr.in 免 key），低频拉取 + 内存缓存，失败保留旧值；进 `petChat` 与碎碎念 prompt 的「现在」段。
+
 ## 5. 面板对接（host.js 经 /panel/pet/* 代理，模块提供以下导出）
+
+
 
 | 导出 | 用途 |
 |---|---|

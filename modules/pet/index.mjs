@@ -20,7 +20,7 @@
 //   · api.use('pet').dispatch({ text, modality?, purpose?, force?, anim? }) → { ok, via:'pet'|'qq', ... }
 //   · focus.json 开着时自动轮次一律不发（也不回落）；force=true（面板手动测试）可绕过
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, unlinkSync, renameSync, copyFileSync, cpSync, rmSync } from 'node:fs'
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, unlinkSync, renameSync, copyFileSync, cpSync, rmSync } from 'node:fs'
 import { join, dirname, sep, basename, extname } from 'node:path'
 import { spawn as nodeSpawn } from 'node:child_process'
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto'
@@ -34,7 +34,7 @@ const MIN_MS = 60_000            // 一分钟（碎碎念间隔/静默窗口都�
 export default {
   id: 'pet',
   name: '桌宠',
-  version: '1.0.4',
+  version: '1.0.5',
   api: 1,
   description: '把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。',
 
@@ -75,6 +75,16 @@ export default {
     chatBehaviorMaxPerDay: 20,         // 聊天联动每日上限
     petScale: 1,                       // 人物大小倍率（0.5~2.0，1 = 原始 240px；客户端按窗口宽等比缩放）
     petReleaseLand: true,              // 松手后落地：开 = 按甩出速度抛出去并落回屏幕底部（原行为）；关 = 松手停在哪就在哪
+    // 对话框（主人找她聊的小窗，与碎碎念/聊天联动是三码事；永不发 QQ）
+    petChatEnabled: false,             // 总开关：默认关（仿行为大脑，面板手动打开）
+    petChatHotkey: 'Alt+P',            // 全局快捷键（单键 toggle）；留空 = 不启用；被占用保持关闭
+    petChatCloseKeyword: '关闭',        // 关闭对话框的关键字：输入框发送前命中直接关窗、不请求模型
+    petChatBlurHide: true,             // 失焦自动收起
+    petChatMaxEntries: 200,            // 历史最多保留条数（超限从头部截断）
+    petChatRetentionDays: 30,          // 历史保留天数（0 = 永久）
+    // 天气（一期，服务端接入）：城市留空 = 不接入；接口留空用内置默认（wttr.in，免 key）
+    petWeatherCity: '',
+    petWeatherUrl: '',                 // 接口地址模板，{city} 会被替换成编码后的城市名；返回纯文本即可
   },
   settings: [
     { key: 'carrier', label: '主动搭话载体', type: 'select', options: [{ value: 'qq', label: 'QQ 私聊' }, { value: 'pet', label: '桌宠气泡' }], hint: 'pet 时桌宠不在线会按下面的开关回落到 QQ；两边永不双发' },
@@ -111,6 +121,16 @@ export default {
     { key: 'chatBehaviorMaxPerDay', label: '聊天联动每日上限', type: 'number', min: 0, max: 9999 },
     { key: 'petScale', label: '人物大小（倍）', type: 'number', min: 0.5, max: 2, hint: '桌宠整体缩放倍率：0.5 = 一半大，2 = 两倍大，1 = 原始大小。面板「桌宠」卡的大小滑条改的也是这一项' },
     { key: 'petReleaseLand', label: '松手后落地', type: 'switch', hint: '拖动松手后按甩出速度抛出去、落回屏幕底部（带 Q 弹挤压）；关掉则松手停在哪就在哪，不抛也不落' },
+    // 对话框（桌宠旁的小窗聊天：快捷键/右键菜单唤出，按碎碎念同款人格+记忆+当下状态回答，永不发 QQ）
+    { key: 'petChatEnabled', label: '对话框', type: 'switch', hint: '开桌宠旁的对话小窗：快捷键或右键菜单唤出，只聊在小窗/气泡里，绝不发 QQ' },
+    { key: 'petChatHotkey', label: '对话框快捷键', type: 'text', hint: '全局快捷键，按一次开、再按一次关（如 Alt+P）。留空 = 不启用；被别的程序占用时注册失败，桌宠会气泡提醒一次、功能保持关闭，此处的当前注册状态看「状态」卡' },
+    { key: 'petChatCloseKeyword', label: '关闭对话框的关键字', type: 'text', hint: '在对话框输入框里发送这句话 → 直接关窗、不请求模型。留空 = 不启用关键字关闭' },
+    { key: 'petChatBlurHide', label: '失焦自动收起', type: 'switch', hint: '点别处（对话框失焦）时自动收起小窗' },
+    { key: 'petChatMaxEntries', label: '对话历史最多保留条数', type: 'number', min: 10, max: 2000, hint: '对话历史只存桌宠本地（不进 QQ、不进工作区持久化），超限从头部截断；界面默认显示最近 50 条' },
+    { key: 'petChatRetentionDays', label: '对话历史保留天数', type: 'number', min: 0, max: 3650, hint: '0 = 永久保留；否则启动时 + 每日清理过期记录' },
+    // 天气（一期）：进 prompt 的「现在」段，她聊到出门/穿衣/下雨时接得上
+    { key: 'petWeatherCity', label: '天气城市', type: 'text', hint: '填城市名（如 上海）才接入天气；留空 = 不接入，所有天气逻辑静默跳过。数据只进 prompt 和本地缓存，绝无对外发送' },
+    { key: 'petWeatherUrl', label: '天气接口地址', type: 'text', hint: '高级：接口模板，{city} 会被替换成编码后的城市名，返回纯文本即可（如 https://wttr.in/{city}?format=%C+%t）。留空 = 用内置默认（wttr.in，免 key）；请求失败保留上一次缓存、不打扰' },
   ],
 
 
@@ -573,7 +593,7 @@ export default {
     // 表现是「行为层整体不生效」而面板一切正常，极难发现。这里拿「模板签名」和「生成时记下的签名」
     // 对账：缺文件 / 内容不符 / 模板比生成物新，一律在 status 里明说，面板据此提示重新生成。
     // 只读对账，绝不自动覆盖用户手改过的 app/（生成走 installClient，由面板按钮触发）。
-    const CLIENT_FILES = ['main.js', 'preload.js', 'index.html', 'physics.js', 'packmeta.js', 'behavior.js']
+    const CLIENT_FILES = ['main.js', 'preload.js', 'index.html', 'physics.js', 'packmeta.js', 'behavior.js', 'chat.html']
     const CLIENT_OPTIONAL = ['README.md'] // 只复制不校验：文档缺失不影响运行
     const CLIENT_STAMP = 'client-stamp.json' // 生成时写进 app/ 的签名凭据
     const fileHash = (p) => {
@@ -1311,7 +1331,7 @@ export default {
         persona ? `【你的人格设定】\n${String(persona).slice(0, 1200)}` : '',
         '【你是一只待在主人电脑桌面角落的小桌宠（大肥鱼）】',
         mem.length ? `【你记得的事】\n${mem.map((t) => '- ' + t).join('\n')}` : '【你记得的事】（记忆库还很空）',
-        `【现在】\n${busy}\n时段：${part}。心情：${moodNow()}。`,
+        `【现在】\n${busy}\n时段：${part}。心情：${moodNow()}。${weatherLine()}`,
         st.recent.length ? `【你最近已经嘟囔过】\n${st.recent.slice(-3).map((x) => '「' + x + '」').join('、')}（不要重复这些话）` : '',
         [
           '【怎么写这一句】',
@@ -1956,6 +1976,278 @@ export default {
       Promise.resolve(chatBehaviorOnce(msg)).catch((error) => api.log.debug?.('聊天联动出错（忽略）：', String(error?.message || error)))
     }
 
+    // ================= 对话框（petChat：主人找她聊的小窗，设计稿 docs/PET-CHAT-DESIGN.md） =================
+    // 与碎碎念（自言自语）、聊天联动（QQ 消息触发小动作）是三码事：这里是主人在桌宠旁的小窗里
+    // 主动找她说话，她按「主人私聊」同款语义回答（人格 + 记忆 + 当下状态）。铁律：**永不发 QQ**。
+    // 回合归属：独立后台回合 key='petChat'（与碎碎念/behavior/chatBehavior 并列，工作区单独成条、
+    // 不抢会话）；并发锁独立命名 petChatBusy，上一句没答完就拒收新句。
+    const PETCHAT_TURN_TITLE = '桌宠 · 对话框（主人找她聊）'
+    const CHAT_HISTORY_LIMIT_PROMPT = 8   // prompt 里附的「最近聊过」条数（多轮上下文兜底，不赌 hub 行为）
+    const chatHistFile = () => api.dataDir('chat/history.jsonl')
+    let petChatBusy = false               // 一轮回答要几十秒：上一句还没答完就拒收新句（仿 whisperBusy）
+    let chatWin = { open: false, at: 0 }  // 客户端上报的对话框开合状态（带时效，过期按关窗处理）
+    let hotkeyState = { state: 'unconfigured', key: '', at: 0 } // 客户端上报的快捷键注册状态：unconfigured/registered/failed
+    const CHAT_WIN_TTL_MS = 5 * 60_000    // 窗口状态 5 分钟没刷新就当关窗（回复走碎碎念气泡）
+    function petChatSettings() {
+      const s = api.settings()
+      const clamp = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : d }
+      const keyword = String(s.petChatCloseKeyword || '').trim().slice(0, 20)
+      return {
+        enabled: s.petChatEnabled === true, // 默认关
+        hotkey: String(s.petChatHotkey || '').trim().slice(0, 32),
+        closeKeyword: keyword,
+        blurHide: s.petChatBlurHide !== false,
+        maxEntries: clamp(s.petChatMaxEntries, 200, 10, 2000),
+        retentionDays: clamp(s.petChatRetentionDays, 30, 0, 3650),
+        weatherCity: String(s.petWeatherCity || '').trim().slice(0, 40),
+      }
+    }
+    // ---------- 历史（api.dataDir('chat/history.jsonl')，每行 {ts,role,text} 追加写；只存桌宠本地） ----------
+    // 追加写 / 头部截断 / 过期清理共用同一把锁（串行 promise 链），避免回复落盘和清理互踩。
+    let chatHistLock = Promise.resolve()
+    function withChatLock(fn) {
+      const run = () => Promise.resolve().then(fn).catch((error) => api.log.warn('对话历史出错：', String(error?.message || error)))
+      const p = chatHistLock.then(run, run)
+      chatHistLock = p.then(() => {}, () => {})
+      return p
+    }
+    /** 读全部历史（坏行丢弃）；内存里最多留 maxEntries 条，读盘原样返回由调用方截断。 */
+    function readChatHistoryRaw() {
+      let raw = ''
+      try { raw = readFileSync(chatHistFile(), 'utf8') } catch { return [] }
+      const out = []
+      for (const line of raw.split('\n')) {
+        const t = line.trim()
+        if (!t) continue
+        try {
+          const o = JSON.parse(t)
+          if (o && typeof o === 'object' && typeof o.text === 'string' && o.text && (o.role === 'user' || o.role === 'pet')) {
+            out.push({ ts: Number(o.ts) || Date.now(), role: o.role, text: String(o.text).slice(0, 600) })
+          }
+        } catch {} // 坏行丢弃，宁可少一条也不让面板炸
+      }
+      return out
+    }
+    const chatHistory = (limit = 50) => readChatHistoryRaw().slice(-Math.max(1, Math.min(2000, Math.round(Number(limit) || 50))))
+    /** 追加一条 + 超限头部截断（重写文件）。 */
+    function appendChatHistory(role, text) {
+      return withChatLock(() => {
+        const t = String(text || '').trim()
+        if (!t) return
+        const st = petChatSettings()
+        mkdirSync(dirname(chatHistFile()), { recursive: true })
+        appendFileSync(chatHistFile(), JSON.stringify({ ts: Date.now(), role, text: t.slice(0, 600) }) + '\n')
+        const all = readChatHistoryRaw()
+        if (all.length > st.maxEntries) {
+          writeFileSync(chatHistFile(), all.slice(-st.maxEntries).map((x) => JSON.stringify(x)).join('\n') + '\n')
+        }
+      })
+    }
+    /** 过期清理（retentionDays=0 = 永久，跳过）；启动时 + 每日 tick 各跑一次。返回清掉几条。 */
+    function petChatSweep(now = Date.now()) {
+      const st = petChatSettings()
+      if (!st.retentionDays) return Promise.resolve({ ok: true, removed: 0 })
+      return withChatLock(() => {
+        const cutoff = now - st.retentionDays * 24 * 60 * 60_000
+        const all = readChatHistoryRaw()
+        const keep = all.filter((x) => x.ts >= cutoff)
+        const removed = all.length - keep.length
+        if (removed > 0) {
+          mkdirSync(dirname(chatHistFile()), { recursive: true })
+          if (keep.length) writeFileSync(chatHistFile(), keep.map((x) => JSON.stringify(x)).join('\n') + '\n')
+          else { try { unlinkSync(chatHistFile()) } catch {} }
+        }
+        return { ok: true, removed }
+      })
+    }
+    // ---------- 天气（一期，服务端接入）：低频拉取 + 内存缓存；失败保留旧缓存、不报错打扰 ----------
+    const DEFAULT_WEATHER_URL = 'https://wttr.in/{city}?format=%C+%t' // 免 key 默认：返回「晴 +26°C」这类一行文本
+    const WEATHER_TTL_MS = 30 * MIN_MS // ≥30 分钟刷新一次（api.every 低频兜底 + prompt 命中即取缓存）
+    let weatherCache = { at: 0, city: '', text: '' }
+    let weatherFetching = false
+    function weatherUrlTemplate() {
+      const raw = String(api.settings().petWeatherUrl || '').trim()
+      return /^https?:\/\//i.test(raw) && raw.includes('{city}') ? raw : DEFAULT_WEATHER_URL
+    }
+    /** 拉一次天气进缓存（可被 petHooks.fetchWeather 注入，测试不打真网络）。失败静默保留旧缓存。 */
+    async function weatherFetchOnce() {
+      const st = petChatSettings()
+      if (!st.weatherCity || weatherFetching) return
+      if (weatherCache.city === st.weatherCity && Date.now() - weatherCache.at < WEATHER_TTL_MS) return
+      weatherFetching = true
+      try {
+        const url = weatherUrlTemplate().replace('{city}', encodeURIComponent(st.weatherCity))
+        const fetchFn = petHooks.fetchWeather || ((u) => fetch(u, { signal: AbortSignal.timeout(10_000) }))
+        const res = await fetchFn(url)
+        if (!res.ok) return
+        const text = String(await res.text() || '').replace(/\s+/g, ' ').trim().slice(0, 40)
+        if (text) weatherCache = { at: Date.now(), city: st.weatherCity, text }
+      } catch {} // 失败保留上一次缓存（可能过期，但好过没有），绝不打扰
+      finally { weatherFetching = false }
+    }
+    /** prompt「现在」段用的一行天气；城市没配 / 还没拉到 → 空串（不进 prompt）。 */
+    function weatherLine() {
+      const st = petChatSettings()
+      if (!st.weatherCity) return ''
+      if (!weatherCache.text || weatherCache.city !== st.weatherCity) return ''
+      void weatherFetchOnce() // 过期就顺手触发低频刷新（fire-and-forget，本轮先用缓存）
+      return `天气：${weatherCache.text}（${st.weatherCity}）。`
+    }
+    // ---------- 记忆（走私聊主人模式）：recallHint 读 / [记] 标记写，全 ?. 容错（memory 模块可能被关掉） ----------
+    /** 合成「主人私聊」上下文调 recallHint：自动获得 about 归主人、弱命中用上一句兜底、强化遗忘曲线。 */
+    function chatRecallHint(text, prevText) {
+      try {
+        const mem = api.use('memory')
+        const cfg = api.config()
+        const chat = { kind: 'private', userId: cfg.ownerQQ, chatId: `private:${cfg.ownerQQ}` }
+        const hint = mem?.recallHint?.(chat, text, String(prevText || '').slice(-300), '')
+        return typeof hint === 'string' ? hint : ''
+      } catch { return '' } // memory 模块不在 / 出错：不带记忆直接答，绝不挂
+    }
+    function chatMemoryAdd(text) {
+      try {
+        const cfg = api.config()
+        api.use('memory')?.add?.({
+          text: String(text || '').slice(0, 200),
+          about: cfg.ownerQQ,              // about 必须归到主人头上：私聊 recall 的 about 过滤才想得起
+          aboutName: cfg.ownerName || '',
+          importance: 0.5,
+          source: 'pet',
+          tags: ['对话框'],
+        })
+      } catch (error) { api.log.debug?.('对话框写记忆失败（忽略）：', String(error?.message || error)) }
+    }
+    // ---------- 回复消毒 + 「[记] 值得记的事」标记解析（沿用行为回执 iconReceipt 的模式：模型决定记什么） ----------
+    function parseChatReply(raw) {
+      const MEMO = /^[ \t]*[*_#>\-\s]*[【\[]\s*(目的|需求|情绪|情绪值|类型|状态|记忆|思考|动作|备注|待续)\s*[】\]]/
+      let text = String(raw ?? '').replace(/\r/g, '')
+      let memo = ''
+      const mk = text.match(/(?:^|\n)\s*[【\[]\s*记\s*[】\]]\s*[:：]?\s*(.+)/)
+      if (mk) { memo = String(mk[1] || '').trim().slice(0, 200); text = text.replace(mk[0], '\n') }
+      text = text.split('\n').filter((l) => !MEMO.test(l)).join('\n') // 备忘段不上气泡
+        .replace(/^[「“"'']+/, '').replace(/[」”"'']+$/, '')
+        .replace(/^大肥鱼\s*[:：]\s*/m, '')
+        .trim()
+      if (!text || /^[[（(【]?\s*(沉默|跳过)\s*[\]）)】]?$/.test(text)) text = ''
+      return { text: text.slice(0, 300), memo }
+    }
+    // ---------- prompt：骨架照抄 whisperPrompt，但框定语句换掉（主人找她聊，不是自言自语） ----------
+    function petChatPrompt(text, prevText) {
+      let persona = ''
+      try { persona = api.core?.personas?.current?.() || '' } catch {}
+      const snap = workSnap
+      const busy = snap.state
+        ? `宿主现在：${WORK_STATE_LABEL[snap.state] || snap.state}${snap.task ? '（' + snap.task + '）' : ''}`
+        : '宿主现在：空闲'
+      const hint = chatRecallHint(text, prevText)
+      const history = readChatHistoryRaw().slice(0, -1).slice(-CHAT_HISTORY_LIMIT_PROMPT) // 当前这句已在库里，排除掉
+      const hh = new Date().getHours()
+      const part = hh < 6 ? '凌晨' : hh < 11 ? '上午' : hh < 14 ? '中午' : hh < 18 ? '下午' : hh < 23 ? '晚上' : '深夜'
+      const weather = weatherLine()
+      return [
+        '（主人在对话框里找你说话，像私聊那样口语地回她。这不是自言自语，也不是在回复 QQ 消息，绝不发去 QQ。）',
+        persona ? `【你的人格设定】\n${String(persona).slice(0, 1200)}` : '',
+        '【你是一只待在主人电脑桌面角落的小桌宠（大肥鱼）】',
+        hint || '',
+        history.length ? `【你们最近聊过】\n${history.map((x) => `${x.role === 'user' ? '主人' : '你'}：${x.text}`).join('\n')}` : '',
+        `【现在】\n${busy}\n时段：${part}。心情：${moodNow()}。${weather}`,
+        '回复里若有什么值得记下来的事（主人的喜好、约定、近况），可以在最后另起一行写「[记] 一句话」；没有就不写。',
+        `【这一轮主人说】\n${String(text).slice(0, 500)}`,
+        '回复主人的这句话，口语、简短（一两句以内），不加引号和名字前缀。这一轮不能用任何工具，直接输出回复。',
+      ].filter(Boolean).join('\n')
+    }
+    /**
+     * 对话框一轮（POST /chat 同函数）。闸门顺序：开关 → 插件 → 桌宠在线 → 专注 → 并发锁 → 关键字拦截。
+     * @returns {Promise<{ok:boolean, reason?:string, text?:string, viaWindow?:boolean, closed?:boolean, messageId?:string}>}
+     */
+    async function petChatOnce(rawText) {
+      const st = petChatSettings()
+      const text = String(rawText || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 500)
+      if (!text) return { ok: false, reason: 'empty' }
+      if (!st.enabled) return { ok: false, reason: 'disabled' }
+      if (api.config().enabled === false) return { ok: false, reason: 'plugin-off' }
+      if (!online().online) return { ok: false, reason: 'pet-offline' }
+      if (focusOn()) return { ok: false, reason: 'focus' }
+      if (petChatBusy) return { ok: false, reason: 'thinking' }
+      // 关键字拦截（服务端兜底；客户端发送前也会先查一遍）：命中直接关窗、不请求模型、不落历史
+      if (st.closeKeyword && text.includes(st.closeKeyword)) {
+        emit('chatClose', {})
+        return { ok: true, closed: true }
+      }
+      const winOpen = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
+      const history = readChatHistoryRaw()
+      const prevText = [...history].reverse().find((x) => x.role === 'user')?.text || ''
+      await appendChatHistory('user', text) // 落盘进锁链（与清理互斥；await 保证时序可测）
+      let raw = ''
+      petChatBusy = true
+      try {
+        const prompt = petChatPrompt(text, prevText)
+        if (typeof api.think === 'function') {
+          raw = await api.think(prompt, { title: PETCHAT_TURN_TITLE, timeoutMs: 120_000, noTools: true, key: 'petChat' })
+        } else if (typeof api.ask === 'function') { // 老宿主没有 api.think：退回单次问答（工作区看不到思考）
+          raw = await api.ask({ text: prompt, maxTokens: 300, temperature: 0.8 })
+        }
+      } catch (error) {
+        api.log.debug?.('对话框生成失败：', String(error?.message || error))
+      } finally { petChatBusy = false }
+      const { text: reply, memo } = parseChatReply(raw)
+      if (!reply) {
+        await appendChatHistory('pet', '（没答上来）')
+        if (winOpen) emit('chat', { text: '（她走神了，再说一遍？）', messageId: randomBytes(6).toString('hex'), windowOpen: true })
+        return { ok: false, reason: 'empty' }
+      }
+      if (memo) chatMemoryAdd(memo) // 模型决定记什么，不做自动全文提炼（防灌库）；about 归主人
+      await appendChatHistory('pet', reply)
+      // 回复下发：对话框开着 → 进消息流；途中窗被关 → 走碎碎念气泡（同一套气泡渲染）。绝不发 QQ。
+      const messageId = randomBytes(6).toString('hex')
+      const winOpenNow = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
+      if (winOpenNow) {
+        emit('chat', { text: reply, messageId, windowOpen: true })
+        return { ok: true, text: reply, viaWindow: true, messageId }
+      }
+      await dispatch({ text: reply.slice(0, 600), modality: 'text', purpose: 'whisper', via: 'pet', noFallback: true })
+      return { ok: true, text: reply, viaWindow: false, messageId }
+    }
+    function petChatStatus() {
+      const st = petChatSettings()
+      const winOpen = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
+      return {
+        enabled: st.enabled, hotkey: st.hotkey, closeKeyword: st.closeKeyword, blurHide: st.blurHide,
+        maxEntries: st.maxEntries, retentionDays: st.retentionDays, weatherCity: st.weatherCity,
+        hotkeyState: hotkeyState.state, // 已注册 / 失败 / 未配置（面板回显注册状态用）
+        windowOpen: winOpen, thinking: petChatBusy, turnTitle: PETCHAT_TURN_TITLE,
+        historyCount: readChatHistoryRaw().length,
+        weather: st.weatherCity ? (weatherCache.city === st.weatherCity ? weatherCache.text : '') : '',
+        online: online().online,
+      }
+    }
+    // ---------- 对话框路由（模块 route 全路径精确匹配，仓库铁律；逐条注册） ----------
+    api.route('/chat', async (req, res) => {
+      if (!guard(req, res).ok) return
+      const body = await api.core.http.body(req)
+      const r = await petChatOnce(body.text)
+      api.core.http.send(res, r.ok ? 200 : 400, r)
+    })
+    api.route('/chat/history', (req, res) => {
+      if (!guard(req, res).ok) return
+      learnHost(req)
+      const q = api.core.http.query(req)
+      const limit = Math.max(1, Math.min(2000, Math.round(Number(q.limit) || 50)))
+      api.core.http.send(res, 200, { ok: true, items: chatHistory(limit) }) // 服务端截断后下发
+    })
+    // 客户端上报：对话框开合 + 快捷键注册状态（面板「状态」卡回显「已注册 / 失败 / 未配置」）
+    api.route('/chat/state', async (req, res) => {
+      if (!guard(req, res).ok) return
+      const body = await api.core.http.body(req)
+      if (body.open === true) chatWin = { open: true, at: Date.now() }
+      else if (body.open === false) chatWin = { open: false, at: Date.now() }
+      const hs = String(body.hotkey || '')
+      if (['registered', 'failed', 'unconfigured'].includes(hs)) {
+        hotkeyState = { state: hs, key: String(body.hotkeyKey || '').slice(0, 32), at: Date.now() }
+      }
+      api.core.http.send(res, 200, { ok: true, windowOpen: petChatStatus().windowOpen })
+    })
+
     // ================= 桌面图标隔离区（第二批：drag_icon / hide_icon 的服务端执行层） =================
     // 铁律 2：「删除桌面图标」永远不是真删除——只有 rename 剪切到隔离区 + manifest 记录 + 可一键归还 + 超期自动归还。
     // 铁律 5：文件夹 / 隐藏文件 / 桌面系统图标（回收站、此电脑等 CLSID 命名的 .lnk）绝对不碰，只碰 .lnk/.url/普通文件。
@@ -2232,6 +2524,7 @@ export default {
         pack: activePack(), playbackCount: playbacks.length,
         work: { ...workSnapshot(), label: WORK_STATE_LABEL[workSnap.state] || '' }, // 当前她在干什么（思考中/干活中/完成…）
         whisper: { ...whisperStatus() },
+        chat: petChatStatus(), // 对话框（快捷键注册状态回显在这）：已注册 / 失败 / 未配置
         portReady: portReady(), port: knownPort ? Number(knownPort) : null,
         electronInstalled: existsSync(electronExe()), pid: recordedPid()?.pid || null,
         client: clientStatus(), // 生成物对账：缺 behavior.js 这类「旧壳」在这里现形
@@ -2258,6 +2551,8 @@ export default {
         // 行为层：客户端的**反应层**（点击/勾引/摸摸/鼠标闲置）是本地直接演的，不看这一份的话
         // 面板关掉「行为总开关」根本拦不住它、鼠标闲置分钟数也永远是默认值（2026-10-30 补）。
         behavior: (() => { const b = behaviorSettings(); return { enabled: b.enabled, idleCursorMinutes: b.idleCursorMinutes } })(),
+        // 对话框：客户端按这份做快捷键注册 / 关键字关闭 / 失焦收起（配置变更路径，不只启动一次）
+        chat: (() => { const c = petChatSettings(); return { enabled: c.enabled, hotkey: c.hotkey, closeKeyword: c.closeKeyword, blurHide: c.blurHide } })(),
         serverTime: Date.now(),
       })
     })
@@ -2467,7 +2762,13 @@ export default {
     }
     // 图标隔离区超期自动归还：10 分钟一扫（读 manifest 纯逻辑，重活不在 tick 里）
     const offIconSweep = api.every(600_000, () => { iconSweep().catch((e) => api.log.warn('图标超期归还出错：', String(e?.message || e))) }, '图标隔离区超期归还')
-    api.onDispose(() => { offHostTimer(); offWhisper(); offBehavior(); offIconSweep(); waiters.clear(); presence.clear(); workMap.clear() })
+    // 对话框：过期历史清理（启动时 + 每日 tick；withChatLock 串行，与回复落盘不互踩）
+    petChatSweep().catch(() => {})
+    const offChatSweep = api.every(60 * MIN_MS, () => { petChatSweep().catch(() => {}) }, '对话框历史清理')
+    // 天气低频刷新（≥30 分钟一次；城市没配时函数内部直接跳过）。测试环境不打真网络，靠手动调 weatherFetchOnce
+    const offWeather = api.every(WEATHER_TTL_MS, () => { weatherFetchOnce().catch(() => {}) }, '天气低频刷新')
+    if (!api.__petTestHooks) setTimeout(() => { weatherFetchOnce().catch(() => {}) }, 3_000).unref?.()
+    api.onDispose(() => { offHostTimer(); offWhisper(); offBehavior(); offIconSweep(); offChatSweep(); offWeather(); waiters.clear(); presence.clear(); workMap.clear() })
     api.log.info(`桌宠模块就绪：host.json 在 ${hostFile()}（端口由宿主注入，Host 头学习保留作漂移纠正）`)
 
     return {
@@ -2514,6 +2815,11 @@ export default {
       chatBehavior: chatBehaviorOnce,        // 测试/手动钩子：聊天联动一轮（activity 同函数，可 await）
       chatBehaviorParse: parseChatAction,    // 测试钩子：聊天联动动作单解析
       chatBehaviorSettings: chatSettings,    // 测试钩子：聊天联动有效配置（含白名单解析结果）
+      petChat: petChatOnce,                  // 测试/手动钩子：对话框一轮（POST /chat 同函数）
+      petChatStatus,                         // 测试钩子：对话框状态（/status 里的 chat 同函数）
+      petChatSweep,                          // 测试钩子：历史过期清理（定时器同函数，可注入 now）
+      petChatHistory: chatHistory,           // 测试钩子：读历史（GET /chat/history 同函数）
+      weatherFetchOnce,                      // 测试钩子：天气拉取（可配 petHooks.fetchWeather，不打真网络）
       onSessionEvent,                        // host.js 把 ctx.on('session/event') 转发进来
       workStatus: () => ({ ...workSnapshot(), label: WORK_STATE_LABEL[workSnap.state] || '', text: workEndText(workSnap) }),
       status: () => {
@@ -2539,6 +2845,7 @@ export default {
           workEnabled: w.enabled, workBubble: w.bubble, workNotify: w.notify,
           workAnimMap: (packView() || {}).workStatus || null, // 面板展示「六档动画能不能对上」
           whisper: whisperStatus(),
+          chat: petChatStatus(), // 对话框（快捷键注册状态回显在这）：已注册 / 失败 / 未配置
           portReady: portReady(), port: knownPort ? Number(knownPort) : null,
           electronInstalled: existsSync(electronExe()), pid: recordedPid()?.pid || null,
           client: clientStatus(), // 面板「桌宠」卡据此提示重新生成（缺文件 = 行为层静默失效）

@@ -1,7 +1,7 @@
 {
   "id": "pet",
   "name": "桌宠",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
   "category": "desktop",
   "tags": [

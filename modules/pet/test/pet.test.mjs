@@ -64,17 +64,24 @@ function startModule({ settings = {}, hooks } = {}) {
   }
   let moodValue = 75 // happy
   let memItems = []
+  let memAdds = []       // 对话框测试：memory.add 的写入记录（看 about/tags 归属）
+  let memHintCalls = []  // 对话框测试：recallHint 的调用记录（看合成的私聊上下文）
+  let memHintText = ''   // recallHint 的固定返回（setMemHint 配）
   let thinkReply = ''
   let thinkHold = null // 非空时 think 挂着不返回（测"上一句还在想"的并发闸）
   const thinkCalls = []
   api.use = (id) => (id === 'mood' ? { current: () => moodValue }
     : id === 'voice' ? { speak: async () => ({ file: voiceFile, engine: 'fake' }) }
-      : id === 'memory' ? { list: (q) => (q ? memItems.filter((m) => String(m.text).includes(q)) : memItems.slice()) }
+      : id === 'memory' ? {
+          list: (q) => (q ? memItems.filter((m) => String(m.text).includes(q)) : memItems.slice()),
+          add: (o) => { memAdds.push({ ...(o || {}) }); return { id: 'm' + memAdds.length } },
+          recallHint: (chat, q, prev) => { memHintCalls.push({ chat: { ...chat }, q, prev }); return memHintText },
+        }
         : null)
   api.has = (id) => (id === 'mood') || (id === 'voice' && Boolean(voiceFile)) || (id === 'memory' && memItems.length > 0)
   // 对齐 modules.js 的 api.think：后台系统回合（工作区里能看到这条会话的思考过程）
   api.think = async (prompt, opts = {}) => {
-    thinkCalls.push({ prompt, title: opts.title, noTools: opts.noTools })
+    thinkCalls.push({ prompt, title: opts.title, noTools: opts.noTools, key: opts.key })
     if (thinkHold) await thinkHold
     return thinkReply
   }
@@ -112,6 +119,7 @@ function startModule({ settings = {}, hooks } = {}) {
     setVoiceFile: (f) => { voiceFile = f }, setMood: (v) => { moodValue = v },
     setMemory: (list) => { memItems = list }, setThinkReply: (t) => { thinkReply = t },
     holdThink: (p) => { thinkHold = p }, thinkCalls,
+    memAdds, memHintCalls, setMemHint: (t) => { memHintText = t },
   }
 }
 
@@ -1266,4 +1274,165 @@ test('碎碎念：间隔最小 1 分钟、最大 9999 分钟、每天最多 9999
   // 排程确实按 1~9999 分钟抽（不会因为下限被夹高而不动）
   const st = { day: new Date().toDateString(), count: 0, nextAt: 0, recent: [] }
   writeFileSync(env.api.dataDir('whisper.json'), JSON.stringify({ ...st }))
+})
+
+// ---------- 对话框（petChat） ----------
+
+test('对话框：闸门链——默认关 / 离线 / 专注 / 并发锁 / 关键字拦截（命中不请求模型）', async () => {
+  const env = startModule({ settings: { petChatCloseKeyword: '关闭' } }) // fake api 不带模块默认值，关键字显式给
+  const r0 = await env.exports.petChat('你好')
+  assert.equal(r0.ok, false)
+  assert.equal(r0.reason, 'disabled', '默认关（petChatEnabled 默认 off）')
+
+  env.api.saveSettings({ petChatEnabled: true })
+  const r1 = await env.exports.petChat('你好')
+  assert.equal(r1.reason, 'pet-offline', '没连 /events = 桌宠离线')
+
+  await env.connect()
+  env.exports.setFocus(true)
+  assert.equal((await env.exports.petChat('你好')).reason, 'focus', '专注模式沿用 focusOn 闸')
+  env.exports.setFocus(false)
+
+  // 并发锁独立命名（petChatBusy）：上一句还没答完就拒收新句
+  let release
+  env.setThinkReply('嗯')
+  env.holdThink(new Promise((resolve) => { release = resolve }))
+  const first = env.exports.petChat('在吗')
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  const second = await env.exports.petChat('然后呢')
+  assert.equal(second.ok, false)
+  assert.equal(second.reason, 'thinking')
+  release()
+  assert.equal((await first).ok, true)
+  env.holdThink(null)
+
+  // 关键字拦截：命中直接关窗（chatClose 事件）、不请求模型、不落历史
+  const before = env.thinkCalls.length
+  const lines = env.exports.petChatHistory(50).length
+  const rK = await env.exports.petChat('关闭')
+  assert.equal(rK.ok, true)
+  assert.equal(rK.closed, true)
+  assert.equal(env.thinkCalls.length, before, '关键字命中不请求模型')
+  assert.equal(env.exports.petChatHistory(50).length, lines, '关键字命中不落历史')
+  const ev = await env.connect({ wantEvents: true, since: 0 })
+  assert.ok(ev.events.some((e) => e.type === 'chatClose'), '下发 chatClose 让客户端关窗')
+})
+
+test('对话框：管线——独立回合 key=petChat、走私聊主人记忆（recallHint 读 / [记] 写归主人）、窗开走 chat 事件、窗关走气泡', async () => {
+  const env = startModule({ settings: { petChatEnabled: true } })
+  env.setMemHint('（你记得这些事…）')
+  await env.connect()
+
+  // 窗开着：客户端上报 open → 回复走 chat 事件
+  await env.call('/chat/state', { method: 'POST', json: { open: true, hotkey: 'registered', hotkeyKey: 'Alt+P' } })
+  env.setThinkReply('嗯嗯，我在的\n[记] 主人喜欢深夜写代码')
+  const r = await env.call('/chat', { method: 'POST', json: { text: '在吗' } })
+  assert.equal(r.status, 200)
+  assert.equal(r.json.ok, true)
+  assert.equal(r.json.viaWindow, true)
+  assert.ok(r.json.messageId, 'chat 事件与 POST 响应共用 messageId（客户端去重）')
+
+  const tc = env.thinkCalls.at(-1)
+  assert.equal(tc.key, 'petChat', '独立后台回合 key=petChat（不抢碎碎念/行为会话）')
+  assert.equal(tc.title, '桌宠 · 对话框（主人找她聊）')
+  assert.equal(tc.noTools, true)
+  assert.ok(tc.prompt.includes('主人在对话框里找你说话'), '框定语句换成「主人找她聊」')
+  assert.ok(!tc.prompt.includes('没有人跟你说话'), '不再用碎碎念的自言自语框定')
+  assert.ok(tc.prompt.includes('回复主人的这句话'), '结尾指令')
+  // 记忆读：走私聊主人上下文（about 归主人、弱命中带上一句）
+  const hint = env.memHintCalls.at(-1)
+  assert.equal(hint.chat.kind, 'private')
+  assert.equal(String(hint.chat.userId), OWNER)
+  assert.equal(hint.chat.chatId, `private:${OWNER}`)
+  assert.ok(tc.prompt.includes('（你记得这些事…）'))
+  // 记忆写：[记] 标记 → add，about 必须归到主人头上（否则私聊 recall 想不起）
+  assert.equal(env.memAdds.length, 1)
+  assert.equal(env.memAdds[0].about, OWNER)
+  assert.equal(env.memAdds[0].source, 'pet')
+  assert.ok(env.memAdds[0].tags.includes('对话框'))
+
+  // 历史双向落盘（服务端截断下发）
+  const h = await env.call('/chat/history', { query: { limit: 50 } })
+  assert.deepEqual(h.json.items.map((x) => x.role), ['user', 'pet'])
+  assert.equal(h.json.items[1].text, '嗯嗯，我在的', '[记] 备忘不进历史与气泡')
+
+  // 回复途中窗被关：改走碎碎念气泡（proactive，purpose=whisper，绝不发 QQ）
+  await env.call('/chat/state', { method: 'POST', json: { open: false } })
+  env.setThinkReply('那早点睡呀')
+  const { cursor } = await env.connect()
+  const r2 = await env.call('/chat', { method: 'POST', json: { text: '我先下了' } })
+  assert.equal(r2.json.ok, true)
+  assert.equal(r2.json.viaWindow, false)
+  const ev = await env.connect({ wantEvents: true, since: cursor })
+  const bubble = ev.events.find((e) => e.type === 'proactive')
+  assert.ok(bubble, '窗关后回复走碎碎念气泡')
+  assert.equal(bubble.purpose, 'whisper')
+  assert.equal(env.sentToQQ.length, 0, '永不发 QQ')
+})
+
+test('对话框：memory 模块不在 → 不带记忆直接答，绝不挂；空回复也按空口径处理', async () => {
+  const env = startModule({ settings: { petChatEnabled: true } })
+  env.api.use = () => null // memory/mood 全不在
+  await env.connect()
+  env.setThinkReply('在的呀')
+  const r = await env.call('/chat', { method: 'POST', json: { text: '在吗' } })
+  assert.equal(r.status, 200, 'memory 模块不在不能把对话框搞挂（验收项）')
+  assert.equal(r.json.ok, true)
+  assert.equal(r.json.text, '在的呀')
+
+  env.setThinkReply('[沉默]')
+  const r2 = await env.call('/chat', { method: 'POST', json: { text: '再说点' } })
+  assert.equal(r2.status, 400)
+  assert.equal(r2.json.ok, false)
+})
+
+test('对话框：历史上限头部截断 + 保留天数清理（0=永久）', async () => {
+  const env = startModule({ settings: { petChatEnabled: true, petChatMaxEntries: 10, petChatRetentionDays: 0 } })
+  await env.connect()
+  env.setThinkReply('嗯')
+  for (let i = 0; i < 8; i++) await env.exports.petChat('消息' + i)
+  const h = env.exports.petChatHistory(50)
+  assert.ok(h.length <= 10, `超限从头部截断（实际 ${h.length} 条）`)
+  assert.equal(h.at(-1).text, '嗯')
+
+  // 过期清理：retentionDays=0 → 永久，一条不清
+  const now = Date.now()
+  const file = env.api.dataDir('chat/history.jsonl')
+  const line = (ts, text) => JSON.stringify({ ts, role: 'user', text })
+  writeFileSync(file, [line(now - 40 * 86400_000, '旧事'), line(now - 1000, '新话')].join('\n') + '\n')
+  assert.equal((await env.exports.petChatSweep(now)).removed, 0, '0=永久：不清')
+
+  // retentionDays=30 → 只清过期行
+  env.api.saveSettings({ petChatRetentionDays: 30 })
+  const r = await env.exports.petChatSweep(now)
+  assert.equal(r.removed, 1)
+  assert.deepEqual(env.exports.petChatHistory(50).map((x) => x.text), ['新话'])
+})
+
+// ---------- 天气（一期） ----------
+
+test('天气：配置城市后拉取进缓存与 prompt；城市留空整块静默；失败保留旧值不炸', async () => {
+  const env = startModule({
+    settings: { petChatEnabled: true, petWeatherCity: '上海' },
+    hooks: { fetchWeather: async () => ({ ok: true, text: async () => '晴 +26°C' }) },
+  })
+  await env.exports.weatherFetchOnce()
+  assert.ok(env.exports.petChatStatus().weather.includes('26'), '拉取结果进状态')
+  await env.connect()
+  env.setThinkReply('嗯')
+  await env.exports.petChat('今天出门带伞吗')
+  assert.ok(env.thinkCalls.at(-1).prompt.includes('天气：晴'), '天气进 prompt 的「现在」段')
+
+  // 接口挂了：静默（不抛、状态还在），换城市后旧缓存不串台
+  const env2 = startModule({
+    settings: { petChatEnabled: true, petWeatherCity: '北京' },
+    hooks: { fetchWeather: async () => { throw new Error('net down') } },
+  })
+  await env2.exports.weatherFetchOnce() // 不应抛
+  assert.equal(env2.exports.petChatStatus().weather, '', '失败保留空缓存、不报错打扰')
+
+  const env3 = startModule({ settings: { petChatEnabled: true } }) // 城市留空
+  await env3.exports.weatherFetchOnce() // 整块静默跳过
+  assert.equal(env3.exports.petChatStatus().weather, '')
+  assert.equal(env3.exports.petChatStatus().weatherCity, '')
 })

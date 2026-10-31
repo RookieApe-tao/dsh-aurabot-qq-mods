@@ -12,7 +12,7 @@
 //   · 端口漂移：baseUrl 失败或轮询出错都会重读 host.json 再试。
 //   · 窗口：置顶、透明无边框、JS 拖拽 + 甩抛（physics.js，P3）、托盘退出、单实例锁。
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen } = require('electron')
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, globalShortcut } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
 const { execFile, spawn } = require('node:child_process')
@@ -163,6 +163,15 @@ async function refreshConfig() {
         enabled: b.enabled !== false,
         idleCursorMinutes: Math.max(1, Number(b.idleCursorMinutes) || behaviorApi.THRESHOLDS.IDLE_CURSOR_MINUTES),
       }
+      // 对话框配置（快捷键注册必须放进配置刷新路径，不能只在启动做一次——面板改键后要能跟上来）
+      const c = cfg.chat || {}
+      chatCfg = {
+        enabled: c.enabled === true,
+        hotkey: String(c.hotkey || '').trim(),
+        closeKeyword: String(c.closeKeyword || '').trim(),
+        blurHide: c.blurHide !== false,
+      }
+      applyChatHotkey()
       if (changed || !win.__packPushed) { win.__packPushed = true; pushPackToRenderer() }
       // 干活状态：/config 也带当前档位（客户端重启/漏事件时靠它对一次，不弹提示、不再提醒）
       const key = `${(cfg.work && cfg.work.state) || ''}|${(cfg.work && cfg.work.task) || ''}`
@@ -253,6 +262,13 @@ async function pollLoop() {
         if (e.type === 'behavior' && !firstBoot) { handleBehavior(e); continue } // 下发层：行为动作单
         if (e.type === 'proactive' && String(e.text || '').trim() && !firstBoot) {
           await showBubble(e.text, e.mood, e.modality, e.anim, e.playbackId, e.purpose)
+        } else if (e.type === 'chat' && !firstBoot) {
+          // 对话框回复（对话框开着时服务端走这条；messageId 与 POST 响应同源，chat.html 自己去重）
+          if (chatWin && !chatWin.isDestroyed()) {
+            chatWin.webContents.executeJavaScript(`window.__chatAppend && window.__chatAppend(${JSON.stringify(String(e.text || ''))}, ${JSON.stringify(String(e.messageId || ''))})`).catch(() => {})
+          }
+        } else if (e.type === 'chatClose' && !firstBoot) {
+          closeChatWin() // 关键字关闭（服务端兜底闸下发）
         } else if (e.type === 'focus') {
           focusOn = e.enabled === true
           if (focusOn) hideBubble()
@@ -1683,6 +1699,7 @@ ipcMain.on('pet:menu', () => {
   // ⚠ 若要恢复：重建 BEHAVIOR_MENU（action 名与服务端 BEHAVIOR_ACTIONS 对齐）+ 模板里插回。
   const menu = Menu.buildFromTemplate([
     { label: '碎碎念', click: whisper },
+    ...(chatCfg.enabled ? [{ label: chatWinAlive() ? '关闭对话框' : '打开对话框', click: toggleChat }] : []), // 与快捷键等效
     { label: '回到初始位置', click: goHome },
     ...(actionSub ? [actionSub] : []),
     { label: '收起气泡', click: hideBubble },
@@ -1695,6 +1712,112 @@ ipcMain.on('pet:menu', () => {
   ])
   menu.popup({ window: win })
 })
+
+// ---------- 对话框（petChat：主人找她聊的小窗；设计稿 docs/PET-CHAT-DESIGN.md） ----------
+// 独立 BrowserWindow（pet 主窗是点击穿透的，这个要可交互）：小尺寸、无边框，锚定人物旁、出屏钳制。
+// 发送链路：chat.html 输入框 → ipc 'pet:chat:send' → 关键字闸（命中直接关窗、不请求模型）→ POST /chat。
+// 回复两条路都会进来（messageId 去重）：POST 响应直接画；服务端 chat 事件经 pollLoop 转发。
+let chatWin = null
+let chatCfg = { enabled: false, hotkey: '', closeKeyword: '', blurHide: true }
+let hotkeyReg = ''            // 当前已注册的组合键（'' = 未注册）
+let hotkeyState = 'unconfigured'
+let hotkeyWarnedAt = 0        // 占用提醒防抖：5 分钟内只气泡提醒一次
+const chatWinAlive = () => Boolean(chatWin && !chatWin.isDestroyed() && chatWin.isVisible())
+function reportChatState() {
+  apiPost('/chat/state', { open: chatWinAlive(), hotkey: hotkeyState, hotkeyKey: hotkeyReg || chatCfg.hotkey })
+}
+function positionChatWin() {
+  if (!chatWin || chatWin.isDestroyed() || !win || win.isDestroyed()) return
+  try {
+    const [pw, ph] = win.getSize()
+    const [px, py] = win.getPosition()
+    const [cw, ch] = chatWin.getSize()
+    const area = screen.getDisplayNearestPoint({ x: px + pw / 2, y: py + ph / 2 }).workArea
+    // 锚定人物旁（左侧），出屏钳制（复用主窗的工作区口径）
+    const x = Math.round(Math.min(Math.max(px - cw - 8, area.x), area.x + area.width - cw))
+    const y = Math.round(Math.min(Math.max(py + Math.round(ph * 0.15), area.y), area.y + area.height - ch))
+    chatWin.setPosition(x, y)
+  } catch {}
+}
+function closeChatWin() {
+  if (!chatWin || chatWin.isDestroyed()) return
+  try { chatWin.close() } catch {}
+}
+function pushChatHistory() {
+  if (!chatWin || chatWin.isDestroyed()) return
+  apiGet('/chat/history', { limit: 50 }).then((d) => { // 服务端截断后下发最近 N 条
+    if (d && d.ok && chatWin && !chatWin.isDestroyed()) {
+      chatWin.webContents.executeJavaScript(`window.__chatSetHistory && window.__chatSetHistory(${JSON.stringify(d.items || [])})`).catch(() => {})
+    }
+  }).catch(() => {})
+}
+function openChatWin() {
+  if (chatWin && !chatWin.isDestroyed()) { chatWin.show(); chatWin.focus(); return }
+  chatWin = new BrowserWindow({
+    width: 320, height: 420, frame: false, resizable: false, alwaysOnTop: true,
+    skipTaskbar: true, show: false,
+    // 本地小窗只加载同目录 chat.html（无远程内容），直接 nodeIntegration 省一套 preload
+    webPreferences: { nodeIntegration: true, contextIsolation: false, spellcheck: false },
+  })
+  chatWin.setAlwaysOnTop(true, 'screen-saver')
+  chatWin.loadFile(path.join(__dirname, 'chat.html'))
+  chatWin.once('ready-to-show', () => { positionChatWin(); chatWin.show(); chatWin.focus(); pushChatHistory() })
+  // Esc 关窗：无边框小窗没有菜单加速键，主进程拦按键
+  chatWin.webContents.on('before-input-event', (_e, input) => { if (input.type === 'keyDown' && input.key === 'Escape') closeChatWin() })
+  chatWin.on('blur', () => { if (chatCfg.blurHide) closeChatWin() }) // 失焦自动收起（开关可配，默认开）
+  chatWin.on('closed', () => { chatWin = null; reportChatState() })
+  reportChatState()
+}
+function toggleChat() {
+  if (!chatCfg.enabled) return
+  if (chatWinAlive()) closeChatWin()
+  else openChatWin()
+}
+/** 快捷键（单键 toggle）：配置变更先注销旧键再注册新键；register 返回 false = 被占用 →
+ *  状态记 failed（面板回显标红）、气泡提醒一次（防抖）、功能保持关闭；客户端重启后由 refreshConfig 补注册。 */
+function applyChatHotkey() {
+  const want = chatCfg.enabled && chatCfg.hotkey ? chatCfg.hotkey : ''
+  if (want === hotkeyReg) return
+  if (hotkeyReg) { try { globalShortcut.unregister(hotkeyReg) } catch {} ; hotkeyReg = '' }
+  if (!want) { hotkeyState = 'unconfigured'; reportChatState(); return }
+  let ok = false
+  try { ok = globalShortcut.register(want, toggleChat) } catch { ok = false }
+  if (ok) {
+    hotkeyReg = want
+    hotkeyState = 'registered'
+  } else {
+    hotkeyState = 'failed'
+    if (Date.now() - hotkeyWarnedAt > 5 * 60_000) {
+      hotkeyWarnedAt = Date.now()
+      showBubble(`快捷键 ${want} 被别的程序占用了，对话框快捷键没生效（可在面板换一个）`, '', 'text', '', '', 'behavior', '对话框')
+    }
+  }
+  reportChatState()
+}
+// 对话框发送（chat.html → ipc）：关键字闸在客户端先行（发送前命中 → 关窗、不请求模型；服务端 /chat 另有兜底）
+ipcMain.on('pet:chat:send', async (_e, text) => {
+  const t = String(text || '').trim().slice(0, 500)
+  if (!t) return
+  if (chatCfg.closeKeyword && t.includes(chatCfg.closeKeyword)) { closeChatWin(); return }
+  const d = await apiPostAwait('/chat', { text: t })
+  if (!chatWin || chatWin.isDestroyed()) return // 回复途中窗被关：服务端已改走碎碎念气泡，这里不用管
+  const js = (fn, arg) => chatWin.webContents.executeJavaScript(`window.${fn} && window.${fn}(${JSON.stringify(String(arg ?? ''))})`).catch(() => {})
+  if (d && d.ok && d.text) {
+    js('__chatAppend', d.text) // messageId 由两路共享，chat.html 自己去重
+  } else if (d && d.closed) {
+    closeChatWin() // 服务端兜底关键字命中（chatClose 事件也会关一次，幂等）
+  } else {
+    const why = !d ? '没连上插件，稍后再试'
+      : d.reason === 'thinking' ? '她在想上一句…'
+      : d.reason === 'focus' ? '专注模式开着，先关掉专注吧'
+      : d.reason === 'pet-offline' ? '桌宠不在线'
+      : d.reason === 'plugin-off' ? '插件开关没开'
+      : d.reason === 'disabled' ? '对话框开关没开（面板里打开）'
+      : '现在不方便聊'
+    js('__chatHint', why)
+  }
+})
+
 
 // ---------- 窗口 / 托盘 ----------
 function createWindow() {
@@ -1724,6 +1847,7 @@ function createTray() {
     tray.setToolTip('Aurabot 桌宠')
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: '显示 / 隐藏', click: () => (win ? (win.isVisible() ? win.hide() : win.show()) : createWindow()) },
+      ...(chatCfg.enabled ? [{ label: chatWinAlive() ? '关闭对话框' : '打开对话框', click: toggleChat }] : []),
       { label: '收起气泡', click: hideBubble },
       { type: 'separator' },
       { label: '退出桌宠', click: () => { running = false; app.quit() } },
@@ -1742,5 +1866,5 @@ app.whenReady().then(() => {
 })
 app.on('window-all-closed', () => {}) // 关窗不退出，从托盘退
 // 退出前一定放开鼠标裁剪区 + 收掉助手进程：ClipCursor 是系统级状态，带不走就成「用户鼠标被锁死」的事故
-app.on('will-quit', () => { try { releaseCursorClip(); stopCursorHelper() } catch {} })
+app.on('will-quit', () => { try { releaseCursorClip(); stopCursorHelper(); globalShortcut.unregisterAll() } catch {} })
 process.on('exit', () => { try { releaseCursorClip() } catch {} })

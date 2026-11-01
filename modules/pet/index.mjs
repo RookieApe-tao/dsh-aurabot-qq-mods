@@ -1893,6 +1893,8 @@ export default {
       const action = String(obj.action || '').trim()
       if (action === 'none') return { action: 'none' }
       if (!CHAT_ACTIONS.has(action)) return null
+      // 2026-11-01：主人禁用的动作聊天联动也不能选（chase_cursor 在安分子集里，禁了就该跳过）。
+      if (behaviorSettings().disabledSet.has(action)) return null
       const params = action === 'say'
         ? { text: String((obj.params && obj.params.text) || '').trim().slice(0, 60) }
         : {}
@@ -1906,7 +1908,9 @@ export default {
     function chatPrompt(msg) {
       let persona = ''
       try { persona = api.core?.personas?.current?.() || '' } catch {}
-      const table = BEHAVIOR_ACTIONS.filter((a) => CHAT_ACTIONS.has(a.action))
+      // 2026-11-01：被主人禁用的动作从简报表里摘掉（禁了 chase_cursor 就别让 AI 挑它）。
+      const banned = behaviorSettings().disabledSet
+      const table = BEHAVIOR_ACTIONS.filter((a) => CHAT_ACTIONS.has(a.action) && !banned.has(a.action))
         .map((a) => `- ${a.action}：${a.desc}（参数：${a.params}）`).join('\n')
       const text = String(msg?.text || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200)
       return [
@@ -2565,7 +2569,9 @@ export default {
         whisper: (({ enabled, source }) => ({ enabled, source }))(whisperStatus()),
         // 行为层：客户端的**反应层**（点击/勾引/摸摸/鼠标闲置）是本地直接演的，不看这一份的话
         // 面板关掉「行为总开关」根本拦不住它、鼠标闲置分钟数也永远是默认值（2026-10-30 补）。
-        behavior: (() => { const b = behaviorSettings(); return { enabled: b.enabled, idleCursorMinutes: b.idleCursorMinutes } })(),
+        // disabledActions（2026-11-01 补）：面板「AI 动作表」开关关掉追鼠标/叼鼠标后，客户端反应层
+        // 也不能再抓鼠标——反应层之前只看 enabled，禁用清单不下发就是「关了还抓」的病根。
+        behavior: (() => { const b = behaviorSettings(); return { enabled: b.enabled, idleCursorMinutes: b.idleCursorMinutes, disabledActions: b.disabledActions } })(),
         // 对话框：客户端按这份做快捷键注册 / 关键字关闭 / 失焦收起（配置变更路径，不只启动一次）
         chat: (() => { const c = petChatSettings(); return { enabled: c.enabled, hotkey: c.hotkey, closeKeyword: c.closeKeyword, blurHide: c.blurHide } })(),
         serverTime: Date.now(),

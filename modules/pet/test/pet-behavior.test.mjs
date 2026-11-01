@@ -313,10 +313,17 @@ test('环境简报：桌面图标清单来自真实桌面（注入 desktopDir）
   rmSync(dir, { recursive: true, force: true })
 })
 
-test('/config 下发 behavior 段：客户端反应层靠它尊重「行为总开关」与「鼠标闲置分钟」', async () => {
-  const env = startModule({ settings: { behaviorEnabled: false, behaviorIdleCursorMinutes: 15 } })
+test('/config 下发 behavior 段：客户端反应层靠它尊重「行为总开关」「鼠标闲置分钟」与禁用清单', async () => {
+  const env = startModule({ settings: { behaviorEnabled: false, behaviorIdleCursorMinutes: 15, behaviorDisabledActions: 'chase_cursor,steal_cursor' } })
   const cfg = (await env.call('/config')).json
-  assert.deepEqual(cfg.behavior, { enabled: false, idleCursorMinutes: 15 }, '少了这一段，面板关开关也拦不住本地反应层')
+  assert.deepEqual(cfg.behavior, { enabled: false, idleCursorMinutes: 15, disabledActions: ['chase_cursor', 'steal_cursor'] },
+    '少了这一段，面板关开关也拦不住本地反应层；禁用清单不下发，客户端关了还抓鼠标（2026-11-01 bug）')
+})
+
+test('聊天联动：被禁用的动作解析层直接拒单', () => {
+  const env = startModule({ settings: { chatBehaviorEnabled: true, behaviorDisabledActions: 'chase_cursor' } })
+  assert.equal(env.exports.chatBehaviorParse('{"action":"chase_cursor","params":{}}'), null, '禁用的 chase_cursor 聊天联动也不许选')
+  assert.equal(env.exports.chatBehaviorParse('{"action":"wander","params":{}}').action, 'wander', '没禁的照常')
 })
 
 test('/playback 行为回执：played/failed/refused 记录并写回 behavior.json recent + 短记忆', async () => {

@@ -814,6 +814,15 @@ test('主进程 carry 契约：ClipCursor 锁住指针 + 到位释放（防止�
   assert.ok(/if \(o\.carry\) pinCursorAtDip/.test(src), 'carry 期间每帧要把指针钉在身体中心')
 })
 
+test('反应层禁用契约：/config 下发 disabledActions，反应层三处抓鼠标入口都要尊重它（2026-11-01 bug）', () => {
+  const src = readFileSync(new URL('../pet-client/main.js', import.meta.url), 'utf8')
+  assert.ok(src.includes('disabledActions'), '/config 必须解析 disabledActions 进 behaviorCfg')
+  assert.ok(/const behaviorActionEnabled/.test(src), '缺统一判禁入口')
+  assert.ok(/behaviorActionEnabled\('chase_cursor'\) && behaviorApi\.isTeasing/.test(src), '勾引→追鼠标要查禁用')
+  assert.ok(/behaviorActionEnabled\('steal_cursor'\) && behaviorApi\.isCursorIdle/.test(src), '鼠标闲置→叼鼠标要查禁用')
+  assert.ok(/pet:click[\s\S]{0,80}behaviorActionEnabled\('chase_cursor'\)/.test(src), '点击桌宠→追鼠标要查禁用')
+})
+
 // ---------- 每个动作都要顶气泡（本地兜底台词） ----------
 
 test('客户端动作表自带 say：拿不到服务端台词时也能顶气泡（点击/勾引/摸摸不经过服务端）', () => {

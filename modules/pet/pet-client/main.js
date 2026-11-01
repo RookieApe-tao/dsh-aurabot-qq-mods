@@ -157,11 +157,14 @@ async function refreshConfig() {
       focusOn = cfg.focus === true
       applyScale(cfg.scale)
       releaseLand = cfg.releaseLand !== false
-      // 行为层配置：总开关 + 鼠标闲置分钟数，本地缓存，读不到用默认
+      // 行为层配置：总开关 + 鼠标闲置分钟数 + 禁用清单，本地缓存，读不到用默认
       const b = cfg.behavior || {}
       behaviorCfg = {
         enabled: b.enabled !== false,
         idleCursorMinutes: Math.max(1, Number(b.idleCursorMinutes) || behaviorApi.THRESHOLDS.IDLE_CURSOR_MINUTES),
+        // 2026-11-01：禁用清单（面板「AI 动作表」开关）。反应层也要尊重它，
+        // 不然关掉追鼠标/叼鼠标后点她、晃鼠标、鼠标闲置照样抓（用户实测的 bug）。
+        disabledActions: Array.isArray(b.disabledActions) ? b.disabledActions.map(String) : [],
       }
       // 对话框配置（快捷键注册必须放进配置刷新路径，不能只在启动做一次——面板改键后要能跟上来）
       const c = cfg.chat || {}
@@ -1518,7 +1521,9 @@ async function handleBehavior(e) {
 }
 // ---------- 反应层感知循环：400ms 轮询鼠标；没动就不推样本（startThrow 教训）；
 // 专注模式整层暂停；判定顺序 摸摸 > 勾引 > 闲置；点击走事件（pet:click）驱动。 ----------
-let behaviorCfg = { enabled: true, idleCursorMinutes: behaviorApi.THRESHOLDS.IDLE_CURSOR_MINUTES }
+let behaviorCfg = { enabled: true, idleCursorMinutes: behaviorApi.THRESHOLDS.IDLE_CURSOR_MINUTES, disabledActions: [] }
+/** 该动作是否被主人禁用（面板「AI 动作表」开关）：反应层与 AI 路径同口径（2026-11-01）。 */
+const behaviorActionEnabled = (a) => !behaviorCfg.disabledActions.includes(a)
 const CURSOR_SAMPLES_MAX = 40
 let cursorSamples = []     // [{x,y,t}] 升序
 let lastCursorMoveAt = Date.now()
@@ -1554,9 +1559,9 @@ setInterval(() => {
       showBubble('（被摸到了…）', '', '', '', '', 'behavior', '行为')
       return playAnimByNames(['蹭', '贴贴', '摸摸', 'pat'])
     }, { dwellMs: behaviorApi.THRESHOLDS.PAT_DWELL_MS })
-  } else if (behaviorApi.isTeasing(cursorSamples, box, now)) {
+  } else if (behaviorActionEnabled('chase_cursor') && behaviorApi.isTeasing(cursorSamples, box, now)) {
     react('tease', () => handleBehavior({ action: 'chase_cursor' }), { note: '主人在旁边快速晃鼠标勾引' })
-  } else if (behaviorApi.isCursorIdle(lastCursorMoveAt, now, behaviorCfg.idleCursorMinutes)) {
+  } else if (behaviorActionEnabled('steal_cursor') && behaviorApi.isCursorIdle(lastCursorMoveAt, now, behaviorCfg.idleCursorMinutes)) {
     lastCursorMoveAt = now // 触发一次后重新计时，避免每轮都打
     // 2026-10-30 用户指定：闲置反应直接叼鼠标（approach_cursor 已删）
     react('idle-cursor', () => handleBehavior({ action: 'steal_cursor' }), { idleMinutes: behaviorCfg.idleCursorMinutes })
@@ -1584,7 +1589,8 @@ ipcMain.on('pet:throw', (_e, { vx, vy }) => {
 })
 ipcMain.on('pet:throw-stop', () => stopThrow())
 // 反应层①点击桌宠：渲染页单击（位移 <6px）上报 → 撒娇动画（渲染页 click 池已播）+ 追鼠标（带冷却）
-ipcMain.on('pet:click', () => { react('click', () => handleBehavior({ action: 'chase_cursor' }), { note: '主人点了桌宠' }) })
+// 2026-11-01：追鼠标被禁用时只保留渲染页自己的点击动画，不再追/抓鼠标。
+ipcMain.on('pet:click', () => { if (behaviorActionEnabled('chase_cursor')) react('click', () => handleBehavior({ action: 'chase_cursor' }), { note: '主人点了桌宠' }) })
 // 渲染页命中检测：true=鼠标在宠物/气泡上（恢复窗口交互），false=在透明区（放行点击）
 ipcMain.on('pet:hit', (_e, hit) => {
   if (!win || win.isDestroyed()) return

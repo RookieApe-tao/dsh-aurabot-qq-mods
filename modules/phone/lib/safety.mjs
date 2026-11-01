@@ -110,18 +110,24 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
     /**
      * 综合闸门。返回 'ALLOW' | 'NEED_CONFIRM' | 'DRY_RUN' | 'REJECT'。
      * 顺序：白名单拒绝 → 试运行 → 写操作需确认（且尚未批准过）→ 放行。
+     * blind=true 表示「坐标点击、没有节点文字」：无法判断是不是写操作，按需确认处理（一审 #19-4）。
      */
-    async gate({ pkg, nodeText } = {}) {
+    async gate({ pkg, nodeText, blind = false } = {}) {
       // 1) 白名单
       const cp = safety.checkPackage(pkg)
       if (!cp.ok) return 'REJECT'
       // 2) 试运行：只出计划不真点击（先于确认，避免 dryRun 期间堆积确认项）
       const s = getSettings() || {}
       if (s.dryRun) return 'DRY_RUN'
-      // 3) 写操作需主人确认；已批准过的 同包名+同节点文本 直接放行
-      if (s.confirmWrites && safety.isWriteAction(nodeText)) {
-        const approved = readApproved().some((x) => x.pkg === pkg && x.nodeText === nodeText)
-        if (!approved) {
+      // 3) 写操作需主人确认；已批准过的 同包名+同节点文本 直接放行（但只放行一次，见下）
+      if (s.confirmWrites && (safety.isWriteAction(nodeText) || (blind && !nodeText))) {
+        const list = readApproved()
+        const i = list.findIndex((x) => x.pkg === pkg && x.nodeText === nodeText)
+        if (i >= 0) {
+          // 一审 #19-8：「批准一次」就只放行这一次——命中即消耗，别让同名按钮以后都放行。
+          list.splice(i, 1)
+          writeApproved(list)
+        } else {
           ensureDirs()
           const item = { id: newId(), pkg, nodeText, at: new Date().toISOString() }
           writeFileSync(join(confirmDir, `${item.id}.json`), JSON.stringify(item, null, 2))

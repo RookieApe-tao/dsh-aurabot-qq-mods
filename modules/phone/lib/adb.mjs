@@ -115,7 +115,10 @@ export function createAdb({ adbPath, serial = '', timeoutMs = 10000 } = {}) {
         e.stderr = 'non-ascii input requires ADB Keyboard IME'
         throw e
       }
-      await run(['shell', 'input', 'text', s.replace(/ /g, '%s')])
+      // 一审 #19-1：adb 会把参数拼成远端 shell 命令，元字符必须转义（空格走 input text 的 %s 约定），
+      // 否则 `;`、`|`、`$()` 之类会被远端 shell 当命令执行。
+      const escaped = s.replace(/[\\;|&$`'"<>()*?!#~{}[\]\s]/g, (c) => (c === ' ' ? '%s' : '\\' + c))
+      await run(['shell', 'input', 'text', escaped])
     },
 
     /** 按键：back / home / enter 等。 */
@@ -154,14 +157,22 @@ export function createAdb({ adbPath, serial = '', timeoutMs = 10000 } = {}) {
 
     /** 启动应用：给包名则 monkey 启动主 Activity；给 component（pkg/act）则直接 am start。 */
     launchApp(pkgOrComponent) {
-      const s = String(pkgOrComponent)
-      if (s.includes('/')) return run(['shell', 'am', 'start', '-n', s]).then(() => undefined)
+      const s = String(pkgOrComponent).trim()
+      const PKG = /^[A-Za-z0-9._]+$/
+      // 一审 #19-1：包名/组件也会进 shell，先按格式校验，别把模型幻觉出的字符串塞进去。
+      if (s.includes('/')) {
+        const [pkg, act] = s.split('/', 2)
+        if (!PKG.test(pkg) || !/^[A-Za-z0-9._$]+$/.test(act || '')) return Promise.reject(new Error(`组件不合法：${s || '(空)'}`))
+        return run(['shell', 'am', 'start', '-n', s]).then(() => undefined)
+      }
+      if (!PKG.test(s)) return Promise.reject(new Error(`包名不合法：${s || '(空)'}`))
       // monkey 在部分模拟器/精简 ROM 上被裁掉（inaccessible or not found）：
       // 失败就退回「解析 launcher activity → am start」两步走
       return run(['shell', 'monkey', '-p', s, '-c', 'android.intent.category.LAUNCHER', '1'])
         .catch(() => run(['shell', 'cmd', 'package', 'resolve-activity', '--brief', s]).then((out) => {
           const act = String(out).split(/\r?\n/).map((x) => x.trim()).find((x) => x && x.includes('/'))
           if (!act) throw new Error(`找不到 ${s} 的启动入口（resolve-activity 为空）`)
+          if (!/^[A-Za-z0-9._]+$/ .test(act.split('/')[1] || '')) throw new Error(`解析出的组件不合法：${act}`)
           return run(['shell', 'am', 'start', '-n', act])
         }))
         .then(() => undefined)

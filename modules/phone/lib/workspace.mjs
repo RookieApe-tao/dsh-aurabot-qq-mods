@@ -83,16 +83,19 @@ async function applyAction(adb, safety, pkg, act, nodeList) {
   const kind = String(act.action || '').toLowerCase()
   if (kind === 'finish') return { done: true, note: String(act.summary || '任务完成') }
 
-  // 判定本步涉及的界面文本（供写操作关键词判定）
+  // 判定本步涉及的界面文本（供写操作关键词判定）：节点 text **和 content-desc** 都算
+  // （一审 #19-4：只有 content-desc 的图标按钮，之前只看 text 会漏判写操作）。
   let nodeText = ''
+  let blind = false // 盲点：坐标点击（没有节点文字）时无法判断是不是写操作
   if (act.n != null && act.n !== '') {
     const node = nodeList[Number(act.n)]
     if (!node || !nodeCenter(nodeList, Number(act.n))) return { done: false, note: `节点 ${act.n} 不存在` }
-    nodeText = node.text || ''
+    nodeText = [node.text, node.desc].filter(Boolean).join(' ')
   }
   if (!nodeText) nodeText = String(act.text || '')
+  if (!nodeText && Array.isArray(act.xy) && ['tap', 'double_tap', 'long_press'].includes(kind)) blind = true
 
-  const verdict = await safety.gate({ pkg, nodeText })
+  const verdict = await safety.gate({ pkg, nodeText, blind })
   if (verdict === 'NEED_CONFIRM') return { done: true, confirm: true, note: '等待主人批准写操作，回合暂停（phone confirm 查看）' }
   if (verdict === 'REJECT') return { done: false, note: `该动作被安全策略拒绝（${nodeText || kind}）` }
   if (verdict === 'DRY_RUN') return { done: false, note: `试运行：计划 ${kind}${nodeText ? '「' + nodeText + '」' : ''}，未执行` }
@@ -251,6 +254,8 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
     }
 
     for (; steps < maxSteps; steps++) {
+      // 一审 #19-6：会话超时被强制释放 / 模块停用时，旧任务要真正停下来，不能和新任务同时操作手机
+      if (ctx.signal?.aborted) { summary = '会话超时被强制释放，回合中止'; break }
       // ① 观察：当前前台包 + 界面节点
       let pkg = ''
       try { pkg = await adb.currentPackage() } catch { /* 读不到包名不致命 */ }
@@ -276,7 +281,8 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
           badSteps++
           if (fb.reason) lastBadReason = fb.reason // 记住最后一次真实失败原因，中止时如实汇报
           if (badSteps >= 3) { summary = lastBadReason || '连续三次取不到界面节点，回合中止'; break }
-          await adb.pressKey('back').catch(() => {}) // 试着退出异常弹层再重试
+          // 一审 #19-5：取不到节点时不再替主人按 back（可能误退当前应用/挂断电话），只等界面加载后重试
+          await sleep(600)
           continue
         }
       } else {

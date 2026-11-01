@@ -4,7 +4,8 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import phone from '../index.mjs'
@@ -132,6 +133,10 @@ test('跨模块 run()：显式打开 delegateEnabled 才委派子智能体；任
   assert.ok(r.message.includes('子智能体'), '结果应标注来自子智能体')
   assert.ok(r.message.includes('3 步'))
   assert.equal(mod.session.status().owner, null, '跑完应释放会话锁')
+  // 受控动作器必须真的能跑（生成器靠拼字符串，最容易在这里出错）
+  const ctl = join(rec.dir, 'phone-ctl.mjs')
+  assert.ok(existsSync(ctl), '委派时应生成受控动作器脚本')
+  execFileSync(process.execPath, ['--check', ctl], { stdio: 'ignore' })
   rmSync(rec.dir, { recursive: true, force: true })
 })
 

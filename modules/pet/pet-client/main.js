@@ -297,6 +297,17 @@ function stopThrow() {
   stopMover() // 移动与抛掷互斥：停飞顺手也停掉行为移动循环（stopMover 见下方行为层）
 }
 /** 把窗口拉回工作区（历史 bug 可能已把桌宠扔到屏幕外，启动/显示时兜一下）。 */
+// 窗口落位基线 lastMove + 唯一移动入口 setWinPos：
+// 去重只在「窗口确实已经在这个位置」时才安全。之前只有 pet:move 更新基线，窗口被抛掷/行为移动
+// 挪走后再拖回同一坐标，第一下会被当成重复吞掉（一期审查指出）；所以所有挪窗口的路统一走这里，
+// 基线永远跟真实位置一致。返回 false = 窗口没了/参数异常，调用方自己决定收尾。
+let lastMove = null
+function setWinPos(x, y) {
+  if (!win || win.isDestroyed()) return false
+  try { win.setPosition(x, y) } catch { return false }
+  lastMove = { x: x, y: y }
+  return true
+}
 function clampWindowToArea() {
   if (!win || win.isDestroyed()) return
   const [wx, wy] = win.getPosition()
@@ -304,7 +315,7 @@ function clampWindowToArea() {
   const area = screen.getDisplayNearestPoint({ x: wx + w / 2, y: wy + h / 2 }).workArea
   const nx = Math.round(Math.min(Math.max(wx, area.x), area.x + area.width - w))
   const ny = Math.round(Math.min(Math.max(wy, area.y), area.y + area.height - h))
-  if (nx !== Math.round(wx) || ny !== Math.round(wy)) win.setPosition(nx, ny)
+  if (nx !== Math.round(wx) || ny !== Math.round(wy)) setWinPos(nx, ny)
 }
 /** 所有显示器 bounds 的并集（虚拟桌面）：拖拽允许跨屏走，但窗口绝不能跑出所有屏之外。
  *  （用户反馈「桌宠跑到屏幕外」的直接原因：拖拽通道原来没有任何边界钳制。） */
@@ -377,7 +388,7 @@ function startThrow(vx, vy) {
     const key = px + ',' + py
     if (key !== lastPos) { // 位置没变就不调原生接口：每秒几百次空搬运同样能把窗口拖死
       lastPos = key
-      try { win.setPosition(px, py) } catch { finish(); return } // 窗口没了/参数异常：立刻收尾，不留半空状态
+      if (!setWinPos(px, py)) { finish(); return } // 窗口没了/参数异常：立刻收尾，不留半空状态
     }
     // 落地挤压限流：一次抛掷最多挤 2 次、间隔 400ms（原来每帧都发，渲染页会堆几十个 rAF 循环）
     if (impact > 600 && squashCount < 2 && now - squashAt > 400) {
@@ -522,7 +533,7 @@ function moveWindowTo(getTarget, opts) {
       if (dist <= stopPx || now - t0 > maxMs) {
         // 收尾：把最后一小步贴上去（仍做一次位置变更检查）
         const key = gx + ',' + gy
-        if (key !== lastPos) { lastPos = key; try { win.setPosition(gx, gy) } catch {} }
+        if (key !== lastPos) { lastPos = key; setWinPos(gx, gy) }
         debugIconLog({ kind: 'move', phase: 'snap', x, y, gx, gy, dist: Math.round(dist), timedOut: now - t0 > maxMs })
         // 叼着鼠标走：终点也要把指针按到最终身体中心，免得停在半路
         if (o.carry) pinCursorAtDip(gx + b.offsetX + b.width / 2, gy + b.offsetY + b.height / 2)
@@ -545,7 +556,7 @@ function moveWindowTo(getTarget, opts) {
       const key = nx + ',' + ny
       if (key !== lastPos) { // 位置没变不调原生接口（startThrow 的教训）
         lastPos = key
-        try { win.setPosition(nx, ny) } catch (e) { debugIconLog({ kind: 'move', phase: 'abort', why: 'setpos-throw', msg: String(e && e.message || e) }); return done(false) }
+        if (!setWinPos(nx, ny)) { debugIconLog({ kind: 'move', phase: 'abort', why: 'setpos-throw', msg: 'setPosition 失败' }); return done(false) }
       }
       // 叼着鼠标走（steal_cursor 阶段②）：每帧把指针钉在身体中心并夹住裁剪区，
       // 于是「桌宠和鼠标一起动」且用户中途拽不出去（不会出现闪回）。
@@ -1537,7 +1548,6 @@ setInterval(() => {
 }, 400)
 
 // ---------- IPC（渲染页拖拽/甩抛 → 主进程） ----------
-let lastMove = null // 上次 pet:move 实际落位（去重用）
 ipcMain.on('pet:move', (_e, { x, y }) => {
   stopThrow()
   if (!win || !Number.isFinite(x) || !Number.isFinite(y)) return
@@ -1547,9 +1557,9 @@ ipcMain.on('pet:move', (_e, { x, y }) => {
   const nx = Math.round(Math.min(Math.max(x, d.x), d.x + d.w - w))
   const ny = Math.round(Math.min(Math.max(y, d.y), d.y + d.h - h))
   // 丢弃重复坐标：渲染页已按帧合并，但同一位置仍可能连发（对齐后指针抖动等）——重复就不必再动窗口
+  // lastMove 由 setWinPos 统一维护（抛掷/行为移动之后也不会变成陈数据）
   if (lastMove && lastMove.x === nx && lastMove.y === ny) return
-  lastMove = { x: nx, y: ny }
-  win.setPosition(nx, ny)
+  setWinPos(nx, ny)
 })
 ipcMain.on('pet:throw', (_e, { vx, vy }) => {
   // 「松手落地」关掉：松手停在哪就在哪 —— 甩抛与原地掉落（vx=vy=0）一并拦下
@@ -1610,7 +1620,7 @@ function goHome() {
   stopThrow()
   const [w, h] = win.getSize()
   const area = screen.getPrimaryDisplay().workArea
-  win.setPosition(area.x + area.width - w - 24, area.y + area.height - h - 16)
+  setWinPos(area.x + area.width - w - 24, area.y + area.height - h - 16)
 }
 // 手动碎碎念文案池（真正的碎碎念由插件按面板里的间隔/文案池生成，这里只是插件不可达时的兜底）
 const WHISPERS = ['在吗在吗？', '戳戳你～', '今天也要加油鸭！', '（盯着你看）', '摸鱼一时爽～', '想你啦！']

@@ -129,7 +129,7 @@ export default {
     { key: 'petChatMaxEntries', label: '对话历史最多保留条数', type: 'number', min: 10, max: 2000, hint: '对话历史只存桌宠本地（不进 QQ、不进工作区持久化），超限从头部截断；界面默认显示最近 50 条' },
     { key: 'petChatRetentionDays', label: '对话历史保留天数', type: 'number', min: 0, max: 3650, hint: '0 = 永久保留；否则启动时 + 每日清理过期记录' },
     // 天气（一期）：进 prompt 的「现在」段，她聊到出门/穿衣/下雨时接得上
-    { key: 'petWeatherCity', label: '天气城市', type: 'text', hint: '填城市名（如 上海）才接入天气；留空 = 不接入，所有天气逻辑静默跳过。数据只进 prompt 和本地缓存，绝无对外发送' },
+    { key: 'petWeatherCity', label: '天气城市', type: 'text', hint: '填城市名（如 上海）才接入天气；留空 = 不接入，所有天气逻辑静默跳过。填了之后插件会向天气接口（默认 wttr.in，可在下方替换地址）请求这个城市的天气，结果只进 prompt 和本地缓存，不会发给聊天对象；天气接口本身会看到城市名' },
     { key: 'petWeatherUrl', label: '天气接口地址', type: 'text', hint: '高级：接口模板，{city} 会被替换成编码后的城市名，返回纯文本即可（如 https://wttr.in/{city}?format=%C+%t）。留空 = 用内置默认（wttr.in，免 key）；请求失败保留上一次缓存、不打扰' },
   ],
 

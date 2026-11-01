@@ -1761,10 +1761,15 @@ function openChatWin() {
   })
   chatWin.setAlwaysOnTop(true, 'screen-saver')
   chatWin.loadFile(path.join(__dirname, 'chat.html'))
-  chatWin.once('ready-to-show', () => { positionChatWin(); chatWin.show(); chatWin.focus(); pushChatHistory() })
+  // 窗口 show:false 时 chatWinAlive() 为 false；ready-to-show 里 show 之后必须补报一次 open:true，
+  // 否则服务端一直以为窗没开、回复会错发到桌面气泡（一审 #18 第 1 点）。
+  chatWin.once('ready-to-show', () => { positionChatWin(); chatWin.show(); chatWin.focus(); pushChatHistory(); reportChatState() })
   // Esc 关窗：无边框小窗没有菜单加速键，主进程拦按键
   chatWin.webContents.on('before-input-event', (_e, input) => { if (input.type === 'keyDown' && input.key === 'Escape') closeChatWin() })
   chatWin.on('blur', () => { if (chatCfg.blurHide) closeChatWin() }) // 失焦自动收起（开关可配，默认开）
+  // 可见性变化一律补报：show() 返回时 isVisible() 未必已翻成 true，靠 show 事件兜底（一审 #18 第 1 点）。
+  chatWin.on('show', () => reportChatState())
+  chatWin.on('hide', () => reportChatState())
   chatWin.on('closed', () => { chatWin = null; reportChatState() })
   reportChatState()
 }
@@ -1801,9 +1806,11 @@ ipcMain.on('pet:chat:send', async (_e, text) => {
   if (chatCfg.closeKeyword && t.includes(chatCfg.closeKeyword)) { closeChatWin(); return }
   const d = await apiPostAwait('/chat', { text: t })
   if (!chatWin || chatWin.isDestroyed()) return // 回复途中窗被关：服务端已改走碎碎念气泡，这里不用管
-  const js = (fn, arg) => chatWin.webContents.executeJavaScript(`window.${fn} && window.${fn}(${JSON.stringify(String(arg ?? ''))})`).catch(() => {})
+  // 支持多参：__chatAppend(text, messageId) —— 两路（POST 响应 / 服务端 chat 事件）带着同一个 id，
+  // chat.html 靠它去重；只传 text 会让同一条回复显示两次（一审 #18 第 3 点）。
+  const js = (fn, ...args) => chatWin.webContents.executeJavaScript(`window.${fn} && window.${fn}(${args.map((a) => JSON.stringify(String(a ?? ''))).join(',')})`).catch(() => {})
   if (d && d.ok && d.text) {
-    js('__chatAppend', d.text) // messageId 由两路共享，chat.html 自己去重
+    js('__chatAppend', d.text, d.messageId)
   } else if (d && d.closed) {
     closeChatWin() // 服务端兜底关键字命中（chatClose 事件也会关一次，幂等）
   } else {

@@ -891,3 +891,12 @@ test('静止形象契约：播完定格在待机末帧（鲸鱼娘），不是 e
   assert.ok(/id="pet"[^>]*style="display:none"/.test(html), 'emoji 兜底应初始隐藏')
   assert.ok(/setTimeout\(\(\) => \{[\s\S]{0,80}pet\.style\.display = 'flex'/.test(html), '素材缺席要有 1.5s 兜底显示')
 })
+
+test('对话框契约（一审 #18）：show 后补报 open、POST 响应带 messageId 去重', () => {
+  const src = readFileSync(new URL('../pet-client/main.js', import.meta.url), 'utf8')
+  // 1) 窗口 show:false → ready-to-show 里 show() 之后必须补报 open:true（否则服务端一直以为没开、回复错发气泡）
+  assert.match(src, /ready-to-show', \(\) => \{[^}]*reportChatState\(\)/, 'ready-to-show 后要补报 open')
+  assert.match(src, /chatWin\.on\('show', \(\) => reportChatState\(\)\)/, 'show 事件兜底补报（show() 后 isVisible 未必已翻）')
+  // 2) POST 响应路径要把 messageId 一起给渲染页，和 chat 事件两路同源去重
+  assert.match(src, /__chatAppend', d\.text, d\.messageId\)/, 'POST 路径漏传 messageId，同一条回复会显示两次')
+})

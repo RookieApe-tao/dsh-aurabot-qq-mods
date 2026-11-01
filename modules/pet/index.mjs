@@ -1020,7 +1020,7 @@ export default {
         child.on?.('error', (error) => api.log.warn('桌宠启动失败：', error.message)) // 没人听就是未捕获异常，会带走 DSH
         child.unref?.()
         electronProc = { pid: child.pid, startedAt: Date.now() }
-        try { writeJsonAtomic(procFile(), electronProc) } catch {}
+        try { writeJsonAtomic(procFile(), electronProc) } catch (e) { api.log.debug(`进程文件写入失败：${e.message}`) }
         api.log.info(`桌宠已启动（pid ${child.pid}）`)
         return { ok: true, pid: child.pid, message: `桌宠已启动（pid ${child.pid}），等它连上就有心跳了` }
       } catch (error) {
@@ -1213,7 +1213,7 @@ export default {
       st.recent = Array.isArray(st.recent) ? st.recent.filter((x) => typeof x === 'string').slice(-8) : []
       return st
     }
-    const saveWhisper = (st) => { try { writeJsonAtomic(whisperFile(), st) } catch {} }
+    const saveWhisper = (st) => { try { writeJsonAtomic(whisperFile(), st) } catch (e) { api.log.warn(`碎碎念状态写盘失败：${e.message}`) } }
     /** 醒着窗口（沿用「主动搭话」的 awakeFrom~awakeTo，不再造第二套真相）。 */
     function awakeWindow() {
       const su = api.config().speakUp || {}
@@ -1534,7 +1534,7 @@ export default {
         : []
       return st
     }
-    const saveBehavior = (st) => { try { writeJsonAtomic(behaviorFile(), st) } catch {} }
+    const saveBehavior = (st) => { try { writeJsonAtomic(behaviorFile(), st) } catch (e) { api.log.warn(`行为大脑状态写盘失败：${e.message}`) } }
     function planBehavior(st, b, now = Date.now()) {
       const span = Math.max(1, b.maxMinutes - b.minMinutes)
       let at = now + (b.minMinutes + Math.round(Math.random() * span)) * MIN_MS
@@ -1875,7 +1875,7 @@ export default {
       st.lastChatId = String(st.lastChatId || '').slice(0, 40)
       return st
     }
-    const saveChatBhv = (st) => { try { writeJsonAtomic(chatFile(), st) } catch {} }
+    const saveChatBhv = (st) => { try { writeJsonAtomic(chatFile(), st) } catch (e) { api.log.warn(`聊天联动状态写盘失败：${e.message}`) } }
     /** 生效范围判定：白名单非空按精确 chatId 匹配；留空 = 只有主人私聊。 */
     function chatAllowed(chatId, cb) {
       const id = String(chatId || '')
@@ -2388,7 +2388,7 @@ export default {
           at: Number(x.at) || 0, reason: String(x.reason || ''), playbackId: String(x.playbackId || ''),
         }))
     }
-    function saveManifest(list) { try { mkdirSync(quarantineDir(), { recursive: true }); writeJsonAtomic(manifestFile(), list) } catch {} }
+    function saveManifest(list) { try { mkdirSync(quarantineDir(), { recursive: true }); writeJsonAtomic(manifestFile(), list) } catch (e) { api.log.warn(`隔离区清单写盘失败：${e.message}`) } }
     /**
      * 「挪文件」的唯一实现（隔离与归还共用）：先试 rename（真正的剪切，原子）；
      * 跨卷时（桌面在 OneDrive/另一块盘，插件数据目录在别的盘）rename 会抛 EXDEV，退化为
@@ -2770,16 +2770,16 @@ export default {
     writeHostFile(true)
     ensureAssetRoutes()
     // 碎碎念排程先落一次盘：面板一打开就能看到「下次约 N 分钟后」，重启也不丢排程
-    try { const st0 = loadWhisper(); if (!st0.nextAt) { planWhisper(st0, whisperSettings()); saveWhisper(st0) } } catch {}
+    try { const st0 = loadWhisper(); if (!st0.nextAt) { planWhisper(st0, whisperSettings()); saveWhisper(st0) } } catch (e) { api.log.warn(`碎碎念排程初始化失败：${e.message}`) }
     // 行为大脑排程同样先落一次盘（独立配额，与碎碎念互不知晓）
-    try { const b0 = loadBehavior(); if (!b0.nextAt) { planBehavior(b0, behaviorSettings()); saveBehavior(b0) } } catch {}
+    try { const b0 = loadBehavior(); if (!b0.nextAt) { planBehavior(b0, behaviorSettings()); saveBehavior(b0) } } catch (e) { api.log.warn(`行为大脑排程初始化失败：${e.message}`) }
     const offHostTimer = api.every(120_000, () => { writeHostFile(true); ensureAssetRoutes() }, '刷新 host.json 与素材路由')
     // 碎碎念：60s 心跳里只做「读一次状态文件 + 纯逻辑判断」，重活都别放进 tick
     const offWhisper = api.every(60_000, () => whisperTick(), '碎碎念')
     const offBehavior = api.every(60_000, () => behaviorTick(), '行为大脑')
     // 聊天联动：只读观察 activity 事件（宿主广播，只看不拦）；旧宿主/fake api 没有 on 时静默跳过
     if (typeof api.on === 'function') {
-      api.on('activity', (msg) => { try { chatBehaviorFire(msg) } catch {} })
+      api.on('activity', (msg) => { try { chatBehaviorFire(msg) } catch (e) { api.log.debug(`聊天联动处理 activity 失败：${e.message}`) } })
     }
     // 图标隔离区超期自动归还：10 分钟一扫（读 manifest 纯逻辑，重活不在 tick 里）
     const offIconSweep = api.every(600_000, () => { iconSweep().catch((e) => api.log.warn('图标超期归还出错：', String(e?.message || e))) }, '图标隔离区超期归还')

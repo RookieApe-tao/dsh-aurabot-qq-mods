@@ -165,6 +165,7 @@ async function refreshConfig() {
         // 2026-11-01：禁用清单（面板「AI 动作表」开关）。反应层也要尊重它，
         // 不然关掉追鼠标/叼鼠标后点她、晃鼠标、鼠标闲置照样抓（用户实测的 bug）。
         disabledActions: Array.isArray(b.disabledActions) ? b.disabledActions.map(String) : [],
+        configLoaded: true, // 首次配置已到，反应层可以按禁用清单跑了
       }
       // 对话框配置（快捷键注册必须放进配置刷新路径，不能只在启动做一次——面板改键后要能跟上来）
       const c = cfg.chat || {}
@@ -1521,9 +1522,11 @@ async function handleBehavior(e) {
 }
 // ---------- 反应层感知循环：400ms 轮询鼠标；没动就不推样本（startThrow 教训）；
 // 专注模式整层暂停；判定顺序 摸摸 > 勾引 > 闲置；点击走事件（pet:click）驱动。 ----------
-let behaviorCfg = { enabled: true, idleCursorMinutes: behaviorApi.THRESHOLDS.IDLE_CURSOR_MINUTES, disabledActions: [] }
-/** 该动作是否被主人禁用（面板「AI 动作表」开关）：反应层与 AI 路径同口径（2026-11-01）。 */
-const behaviorActionEnabled = (a) => !behaviorCfg.disabledActions.includes(a)
+let behaviorCfg = { enabled: true, idleCursorMinutes: behaviorApi.THRESHOLDS.IDLE_CURSOR_MINUTES, disabledActions: [], configLoaded: false }
+/** 该动作是否被主人禁用（面板「AI 动作表」开关）：反应层与 AI 路径同口径（2026-11-01）。
+ *  首次 /config 返回前 configLoaded=false：禁用清单未知，先按「不跑」处理——否则启动瞬间
+ *  关掉的追鼠标/叼鼠标还会抓一下（一审 #20 唯一一条）。摸摸不受影响（不在禁用清单口径里）。 */
+const behaviorActionEnabled = (a) => behaviorCfg.configLoaded && !behaviorCfg.disabledActions.includes(a)
 const CURSOR_SAMPLES_MAX = 40
 let cursorSamples = []     // [{x,y,t}] 升序
 let lastCursorMoveAt = Date.now()

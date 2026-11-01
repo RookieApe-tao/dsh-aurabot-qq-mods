@@ -821,6 +821,7 @@ test('反应层禁用契约：/config 下发 disabledActions，反应层三处�
   assert.ok(/behaviorActionEnabled\('chase_cursor'\) && behaviorApi\.isTeasing/.test(src), '勾引→追鼠标要查禁用')
   assert.ok(/behaviorActionEnabled\('steal_cursor'\) && behaviorApi\.isCursorIdle/.test(src), '鼠标闲置→叼鼠标要查禁用')
   assert.ok(/pet:click[\s\S]{0,80}behaviorActionEnabled\('chase_cursor'\)/.test(src), '点击桌宠→追鼠标要查禁用')
+  assert.ok(/configLoaded/.test(src), '首次配置返回前默认不跑（configLoaded），避免启动瞬间抓一下')
 })
 
 // ---------- 每个动作都要顶气泡（本地兜底台词） ----------

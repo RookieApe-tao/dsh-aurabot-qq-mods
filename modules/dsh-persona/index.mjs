@@ -90,12 +90,17 @@ export default {
     const readStyle = () => normalizeStyle(api.settings())
     /** 当前应注入的文本：未启用 = 空串（撤销注入）；personaId 空 = 跟随当前人格。 */
     const renderNow = () => {
-      const s = readStyle()
-      if (s.enabled !== true) return ''
-      const personas = api.core?.personas
-      if (!personas) return ''
-      const body = s.personaId ? personas.read?.(s.personaId)?.body : personas.current?.()
-      return dshPersonaText(body, { thinkingStyle: s.thinkingStyle, replyStyle: s.replyStyle })
+      try {
+        const s = readStyle()
+        if (s.enabled !== true) return ''
+        const personas = api.core?.personas
+        if (!personas) return ''
+        const body = s.personaId ? personas.read?.(s.personaId)?.body : personas.current?.()
+        return dshPersonaText(body, { thinkingStyle: s.thinkingStyle, replyStyle: s.replyStyle })
+      } catch (e) {
+        api.log?.warn?.(`[dsh-persona] 人格渲染失败，本轮跳过注入：${e.message}`)
+        return ''
+      }
     }
     // 变量名/段名特意和内核版、dsh-cosplay 错开：同时装了也不互相覆盖（只是会叠加人设，别同时开）
     // variable()/section() 都返回注销函数：模块停用/重载时必须注销，否则重载时会报「already registered」
@@ -111,9 +116,15 @@ export default {
     })
 
     // 面板数据：当前设置 + 可选人格列表 + 当前正在用的人格 id
+    // 错误日志约定：与仓库其他模块一致，走插件宿主日志（api.log.*），不单独写错误日志文件
     api.route('/state', async () => {
-      const personas = (api.core?.personas?.list?.() || []).map((p) => ({ id: p.id, name: p.name, tags: p.tags || [] }))
-      return { ok: true, style: readStyle(), personas, current: api.config()?.persona?.current || '' }
+      try {
+        const personas = (api.core?.personas?.list?.() || []).map((p) => ({ id: p.id, name: p.name, tags: p.tags || [] }))
+        return { ok: true, style: readStyle(), personas, current: api.config()?.persona?.current || '' }
+      } catch (e) {
+        api.log?.warn?.(`[dsh-persona] /state 读取失败：${e.message}`)
+        return { ok: false, message: e.message }
+      }
     })
   },
 }

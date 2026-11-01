@@ -8,8 +8,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createGuides, BUILTIN_GUIDES } from '../lib/guides.mjs'
 
-test('内置指引：四个 key 都有正文，generic 永远可取', () => {
-  assert.deepEqual(Object.keys(BUILTIN_GUIDES).sort(), ['bili', 'douyin', 'generic', 'xhs'])
+test('内置指引：五个 key 都有正文，generic 永远可取；总纲 main 不挂包名/关键词（resolve 不会自动挑它）', () => {
+  assert.deepEqual(Object.keys(BUILTIN_GUIDES).sort(), ['bili', 'douyin', 'generic', 'heybox', 'main'])
+  assert.deepEqual(BUILTIN_GUIDES.main.packages, [])
+  assert.deepEqual(BUILTIN_GUIDES.main.keywords, [])
   for (const [key, g] of Object.entries(BUILTIN_GUIDES)) {
     assert.ok(g.text.length > 100, `${key} 指引正文太短`)
     assert.ok(g.text.includes('finish'), `${key} 指引应交代 finish 约定`)

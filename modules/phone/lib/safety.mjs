@@ -164,8 +164,8 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       return true
     },
 
-    /** 操作日志：按天追加 logs/ops-YYYY-MM-DD.log。 */
-    log(action, detail = '') {
+    /** 操作日志：按天追加 logs/ops-YYYY-MM-DD.log。返回 Promise，供调用方 .catch 兜底。 */
+    async log(action, detail = '') {
       ensureDirs()
       const line = `${new Date().toISOString()}\t${action}\t${String(detail).replace(/\r?\n/g, ' ')}\n`
       appendFileSync(join(logDir, `ops-${localDate()}.log`), line)

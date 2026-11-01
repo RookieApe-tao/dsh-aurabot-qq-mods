@@ -2,7 +2,9 @@
 // 作用：占锁 → 逐「观察→决策→守门→执行」循环遥控手机完成一句话任务 → 收尾存记忆、放锁。
 // 观察层：节点优先（uiautomator brief），当轮取不到节点就立刻截图兜底（视觉模型按像素坐标决策，
 //         tap 支持 xy 形态）；模型看不了图才退回 back+重试（连续三次坏步中止）。
-// 契约：export async function runWorkspace({ flowKey, prompt, packages = [], maxSteps = 40, ctx })
+// 契约：export async function runWorkspace({ flowKey, prompt, packages = [], maxSteps = 40, guide = '', guideFor = null, ctx })
+//   guide：常驻「主流程总纲」（传了 guideFor 时）；只传 guide 不传 guideFor = 整场一份应用手册（旧用法）
+//   guideFor(pkg) → 手册文本或 ''：按当前前台应用按需加载单应用手册（省 token），每包只解析一次
 //   ctx = { adb, session, safety, memory, ask, report?(chatId, text) }
 //   → { ok, summary, steps }
 // 另 export cronMatch(expr, date)：五字段简单 cron（分 时 日 月 周），支持 * / 数字 / */n / 逗号列表。
@@ -56,6 +58,26 @@ function parseAction(text) {
   }
 }
 
+/** 等一小段毫秒（双击两次 tap 之间留间隙用）。 */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/** 解析 tap / double_tap / long_press 共用的目标坐标：节点号 n（节点模式）> 像素坐标 xy（截图兜底） */
+function resolveTarget(act, nodeList) {
+  let center = null
+  if (act.n != null && act.n !== '') center = nodeCenter(nodeList, Number(act.n))
+  if (!center && Array.isArray(act.xy) && act.xy.length === 2 && act.xy.every((v) => Number.isFinite(v) && v > 0)) {
+    center = [Math.round(act.xy[0]), Math.round(act.xy[1])]
+  }
+  if (!center) return { note: act.xy !== undefined ? '坐标 xy 不合法' : `节点 ${act.n} 不存在` }
+  return { center }
+}
+
+/** scroll 持续时长：模型给的 ms 夹在 100~2000，缺省 300。 */
+function scrollMs(act) {
+  const n = Number(act.ms)
+  return Number.isFinite(n) ? Math.min(2000, Math.max(100, Math.round(n))) : 300
+}
+
 /** 把一次模型决策过安全门并执行；返回 { done, note } */
 async function applyAction(adb, safety, pkg, act, nodeList) {
   const kind = String(act.action || '').toLowerCase()
@@ -79,24 +101,77 @@ async function applyAction(adb, safety, pkg, act, nodeList) {
   try {
     switch (kind) {
       case 'tap': {
-        // 坐标优先级：节点号 n（节点模式）> 像素坐标 xy（截图兜底模式）
-        let center = null
-        if (act.n != null && act.n !== '') center = nodeCenter(nodeList, Number(act.n))
-        if (!center && Array.isArray(act.xy) && act.xy.length === 2 && act.xy.every((v) => Number.isFinite(v) && v > 0)) {
-          center = [Math.round(act.xy[0]), Math.round(act.xy[1])]
-        }
-        if (!center) return { done: false, note: act.xy !== undefined ? '坐标 xy 不合法' : `节点 ${act.n} 不存在` }
-        await adb.tap(center[0], center[1])
+        const t = resolveTarget(act, nodeList)
+        if (!t.center) return { done: false, note: t.note }
+        await adb.tap(t.center[0], t.center[1])
+        break
+      }
+      case 'double_tap': {
+        // 双击：两次 tap 留 80ms 间隙，慢于系统双击阈值（约 300ms）会被当成两次单击
+        const t = resolveTarget(act, nodeList)
+        if (!t.center) return { done: false, note: t.note }
+        await adb.tap(t.center[0], t.center[1])
+        await sleep(80)
+        await adb.tap(t.center[0], t.center[1])
+        break
+      }
+      case 'long_press': {
+        // 长按：默认 800ms，可用 ms 参数（600~2000）调时长；弹出菜单/多选/拖拽入口用
+        const t = resolveTarget(act, nodeList)
+        if (!t.center) return { done: false, note: t.note }
+        await adb.longPress(t.center[0], t.center[1], Number(act.ms) || 800)
         break
       }
       case 'input':
         await adb.inputText(String(act.text || ''))
         break
-      case 'scroll':
-        // 从屏幕中部向指定方向滑一屏（默认 1080x2340 量级坐标，够用即可）
-        if (act.dir === 'up') await adb.swipe(540, 700, 540, 1800, 300)
-        else await adb.swipe(540, 1800, 540, 700, 300)
+      case 'clear': {
+        // 清空已输入内容：给了目标（n/xy）就先点一下聚焦，再清空当前输入框
+        if (act.n != null && act.n !== '' || Array.isArray(act.xy)) {
+          const t = resolveTarget(act, nodeList)
+          if (!t.center) return { done: false, note: t.note }
+          await adb.tap(t.center[0], t.center[1])
+        }
+        await adb.clearText()
         break
+      }
+      case 'drag': {
+        // 精确拖拽：起点（n/xy，同 tap）拖到终点 to:[x,y]（或 to_n 节点），ms 可选（100~5000，默认 600）
+        const from = resolveTarget(act, nodeList)
+        if (!from.center) return { done: false, note: from.note }
+        let to = null
+        if (act.to_n != null && act.to_n !== '') to = nodeCenter(nodeList, Number(act.to_n))
+        if (!to && Array.isArray(act.to) && act.to.length === 2 && act.to.every((v) => Number.isFinite(v) && v > 0)) {
+          to = [Math.round(act.to[0]), Math.round(act.to[1])]
+        }
+        if (!to) return { done: false, note: '终点 to/to_n 不合法' }
+        const ms = Math.min(5000, Math.max(100, Number.isFinite(Number(act.ms)) ? Math.round(Number(act.ms)) : 600))
+        await adb.swipe(from.center[0], from.center[1], to[0], to[1], ms)
+        break
+      }
+      case 'key':
+        // 白名单按键：enter/tab/volume_up/volume_down/power/notifications；软键盘没「搜索」键时用 enter 顶
+        await adb.key(act.name)
+        break
+      case 'wait': {
+        // 等待加载/转场：不碰设备纯空转，夹 500~10000ms，缺省 1000
+        const n = Number(act.ms)
+        const ms = Number.isFinite(n) ? Math.min(10000, Math.max(500, Math.round(n))) : 1000
+        await sleep(ms)
+        break
+      }
+      case 'scroll': {
+        // 从屏幕中部向指定方向滑一屏（默认 1080x2340 量级坐标，够用即可）
+        // up=内容上移看下方；left=向左滑看右侧；right=向右滑看左侧（横滑也支持 ms 调速）
+        const ms = scrollMs(act)
+        switch (act.dir) {
+          case 'up': await adb.swipe(540, 700, 540, 1800, ms); break
+          case 'left': await adb.swipe(900, 1170, 180, 1170, ms); break
+          case 'right': await adb.swipe(180, 1170, 900, 1170, ms); break
+          default: await adb.swipe(540, 1800, 540, 700, ms)
+        }
+        break
+      }
       case 'back': await adb.pressKey('back'); break
       case 'home': await adb.pressKey('home'); break
       case 'launch': await adb.launchApp(String(act.pkg || act.text || '')); break
@@ -113,18 +188,12 @@ async function applyAction(adb, safety, pkg, act, nodeList) {
  * 截图兜底：uiautomator 取不到节点（渲染层视频流 / 游戏 / 部分 WebView 常见）时，
  * 当轮立刻截整屏交给视觉模型按像素坐标决策，不走 back+重试计数。
  * 返回 { act }（拿到动作）或 { reason, visionBroken? }（失败原因；visionBroken=这个模型看不了图，本次回合内不再试）。
+ * system 由调用方按「总纲 + 当前应用手册 + 历史经验」拼好传入（和节点路径同一套注入）。
  */
-async function decideByShot({ adb, ask, pkg, prompt, steps, maxSteps, guide, mem, visionBroken }) {
+async function decideByShot({ adb, ask, pkg, prompt, steps, maxSteps, system, visionBroken }) {
   if (visionBroken) return { reason: '' } // 已知看不了图：直接走老的 back+重试
   let shot
   try { shot = await adb.screenshot() } catch (e) { return { reason: `截屏失败：${e.message}` } }
-  const system = [
-    '你是 Android 手机操作决策器。当前界面拿不到控件节点清单，给你一张整屏截图，你只回一个 JSON 动作，不要其他文字。',
-    'JSON 格式：{"action":"tap|input|scroll|back|home|launch|finish","xy":[x,y],"text":输入文本,"dir":"up|down","pkg":包名,"ok":布尔,"summary":"进度一句话"}',
-    'tap 的 xy 填目标在截图里的像素坐标（截图与屏幕同分辨率，原点左上）；看不清或不确定就不要猜坐标，用 finish 并在 summary 说明原因。',
-    guide ? `【操作手册（本应用专属，优先照做）】\n${guide}` : '',
-    mem?.summary ? `历史经验（优先复用）：${mem.summary}` : '',
-  ].filter(Boolean).join('\n')
   const user = [
     `目标：${prompt}`,
     pkg ? `当前前台应用：${pkg}` : '',
@@ -144,7 +213,7 @@ async function decideByShot({ adb, ask, pkg, prompt, steps, maxSteps, guide, mem
   }
 }
 
-export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = [], maxSteps = 40, guide = '', ctx }) {
+export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = [], maxSteps = 40, guide = '', guideFor = null, ctx }) {
   const { adb, session, safety, memory, ask, report } = ctx
   let steps = 0
   let badSteps = 0 // 连续坏步计数
@@ -152,21 +221,40 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
   let lastBadReason = '' // 最近一次取不到节点时的真实失败原因（中止时如实汇报）
   let ok = false
   let summary = ''
+  const visited = new Set() // 本轮实际到过的前台包名（含启动过的），收尾关应用释放内存用
   await session.acquire(flowKey)
   try {
     const mem = memory.load(flowKey)
-    const system = [
-      '你是 Android 手机操作决策器。每回合给你当前界面节点清单，你只回一个 JSON 动作，不要其他文字。',
-      'JSON 格式：{"action":"tap|input|scroll|back|home|launch|finish","n":节点号,"text":输入文本,"dir":"up|down","pkg":包名,"ok":布尔,"summary":"进度一句话"}',
-      'tap 用界面清单里的节点号 n；input 时 text 填要输入的内容；任务做完或确认无法继续用 finish 并写 summary。',
-      guide ? `【操作手册（本应用专属，优先照做）】\n${guide}` : '',
-      mem?.summary ? `历史经验（优先复用）：${mem.summary}` : '',
-    ].filter(Boolean).join('\n')
+    // 提示词注入（省 token）：guide 是常驻的「总纲/主流程」（优先注入）；guideFor(pkg) 按需返回
+    // 当前前台应用的单应用手册——决定刷某个应用后才加载，没对应手册就不注入。每包只解析一次并缓存。
+    // 旧用法（只传 guide 不传 guideFor）保持原语义：整场一份应用手册。
+    const appCache = new Map() // pkg → 手册文本（'' = 没有）
+    const manualFor = (pkg) => {
+      if (!guideFor) return guide
+      if (!appCache.has(pkg)) appCache.set(pkg, pkg ? String(guideFor(pkg) || '') : '')
+      return appCache.get(pkg) || ''
+    }
+    const buildSystem = (pkg, isShot) => {
+      const manual = manualFor(pkg)
+      return [
+        isShot
+          ? '你是 Android 手机操作决策器。当前界面拿不到控件节点清单，给你一张整屏截图，你只回一个 JSON 动作，不要其他文字。'
+          : '你是 Android 手机操作决策器。每回合给你当前界面节点清单，你只回一个 JSON 动作，不要其他文字。',
+        'JSON 格式：{"action":"tap|input|clear|drag|scroll|key|wait|back|home|launch|double_tap|long_press|finish","' + (isShot ? 'xy":[x,y]' : 'n":节点号') + ',"text":输入文本,"dir":"up|down|left|right","name":按键名,"to":[x,y],"ms":毫秒,"pkg":包名,"ok":布尔,"summary":"进度一句话"}',
+        isShot
+          ? 'tap/double_tap/long_press/clear/drag 起点的 xy 填目标在截图里的像素坐标（截图与屏幕同分辨率，原点左上）；看不清或不确定就不要猜坐标，用 finish 并在 summary 说明原因。'
+          : 'tap/double_tap/long_press/clear/drag 起点用界面清单里的节点号 n（清单里没有的可交互元素也可以直接给像素坐标 xy:[x,y]，屏幕分辨率与清单同源）；input 时 text 填要输入的内容；clear 清空已聚焦输入框；drag 的 to 填终点坐标；scroll 用 dir 选 up/down/left/right；key 用 name 选 enter/tab/volume_up/volume_down/power/notifications；wait 的 ms 可选（500~10000，默认 1000）；任务做完或确认无法继续用 finish 并写 summary。',
+        guide && !guideFor ? `【操作手册（本应用专属，优先照做）】\n${guide}` : (guide ? `【主流程总纲（优先照做）】\n${guide}` : ''),
+        manual ? `【操作手册（当前应用，优先照做）】\n${manual}` : '',
+        mem?.summary ? `历史经验（优先复用）：${mem.summary}` : '',
+      ].filter(Boolean).join('\n')
+    }
 
     for (; steps < maxSteps; steps++) {
       // ① 观察：当前前台包 + 界面节点
       let pkg = ''
       try { pkg = await adb.currentPackage() } catch { /* 读不到包名不致命 */ }
+      if (pkg) visited.add(pkg)
       let parsed
       try {
         parsed = parseNodes(await adb.dumpNodes())
@@ -180,7 +268,7 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
       // ② 决策：节点优先；当轮取不到节点就立刻截图兜底（模型看不了图才退回 back+重试计数）
       let act = null
       if (parsed.error || !parsed.list.length) {
-        const fb = await decideByShot({ adb, ask, pkg, prompt, steps, maxSteps, guide, mem, visionBroken })
+        const fb = await decideByShot({ adb, ask, pkg, prompt, steps, maxSteps, system: buildSystem(pkg, true), visionBroken })
         if (fb.act) {
           act = fb.act
         } else {
@@ -200,7 +288,7 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
           '只回 JSON 动作。',
         ].filter(Boolean).join('\n')
         try {
-          act = parseAction(await ask({ system, text: user }))
+          act = parseAction(await ask({ system: buildSystem(pkg, false), text: user }))
         } catch { act = null }
         if (!act || !act.action) {
           badSteps++
@@ -213,7 +301,7 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
       // ③ 守门 + 执行 + 心跳 + 日志
       const result = await applyAction(adb, safety, pkg, act, parsed.list)
       await session.heartbeat(flowKey)
-      await safety.log(act.action, result.note).catch(() => {})
+      await safety.log(act.action, result.note).catch((e) => ctx.log?.(`安全审计落盘失败：${e.message}`))
       if (result.done) {
         ok = result.confirm ? false : act.ok !== false
         summary = result.note
@@ -226,9 +314,9 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
     summary = `工作区异常：${e.message}`
   } finally {
     // ⑥ 收尾：存记忆 + 放锁 + 汇报
-    await memory.save(flowKey, { runLog: { steps, ok, summary }, goal: prompt }).catch(() => {})
+    await memory.save(flowKey, { runLog: { steps, ok, summary }, goal: prompt }).catch((e) => ctx.log?.(`回合记忆写入失败：${e.message}`))
     session.release(flowKey)
     if (report) { try { report(null, `手机任务「${prompt}」${ok ? '完成' : '未完成'}：${summary}`) } catch { /* 汇报失败不影响结果 */ } }
   }
-  return { ok, summary, steps }
+  return { ok, summary, steps, visited: [...visited] }
 }

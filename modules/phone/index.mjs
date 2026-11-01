@@ -43,8 +43,6 @@ export default {
         confirmWrites: s.confirmWrites !== false,
         dryRun: !!s.dryRun,
         closeAppsAfter: s.closeAppsAfter !== false, // 逛完关闭应用进程释放内存：默认开
-        // 一审 #19-3：委派给子智能体默认关（它会让子级独立跑 ADB）；开着时也只走受控动作器（白名单/限速/写确认在脚本里强制）
-        delegateEnabled: s.delegateEnabled === true,
         sessionTimeoutMs: Number(s.sessionTimeoutMs) || 900000,
         writeEventMemory: s.writeEventMemory !== false,
         decisionModel: String(s.decisionModel || ''), // 'provider::model'，空 = 跟随全局模型
@@ -111,75 +109,6 @@ export default {
       return (testHooks.createAdb || createAdb)({ adbPath: env.adbPath, serial: s.deviceSerial, timeoutMs: 10000 })
     }
 
-    /**
-     * 生成「受控动作器」脚本（一审 #19-3）：委派给子智能体时只给它这个入口，
-     * 白名单 / 限速 / 写操作确认都由 safety 在脚本内部强制——不再是任务书里的文字约定。
-     */
-    function writeCtl(adbPath) {
-      const s = getSettings()
-      const snap = {
-        adbPath: String(adbPath || ''), deviceSerial: s.deviceSerial, whitelist: s.whitelist,
-        rateLimit: s.rateLimit, confirmWrites: s.confirmWrites, dryRun: s.dryRun,
-      }
-      const lib = (p) => new URL('./lib/' + p, import.meta.url).href
-      const file = join(dataDir(), 'phone-ctl.mjs')
-      const body = [
-        '// 手机逛逛·受控动作器（模块在委派时生成，勿手改）：所有动作先过 safety 闸门（白名单/限速/写操作确认）。',
-        'import { createAdb } from ' + JSON.stringify(lib('adb.mjs')),
-        'import { createSafety } from ' + JSON.stringify(lib('safety.mjs')),
-        'import { parseNodes } from ' + JSON.stringify(lib('nodes.mjs')),
-        'const SETTINGS = ' + JSON.stringify(snap),
-        'const DATA_DIR = ' + JSON.stringify(String(dataDir()).split('\\').join('/')),
-        'const out = (o) => { console.log(JSON.stringify(o)); process.exit(o.ok ? 0 : 1) }',
-        'const [op, ...args] = process.argv.slice(2)',
-        'const adb = createAdb({ adbPath: SETTINGS.adbPath, serial: SETTINGS.deviceSerial })',
-        'const safety = createSafety({ dataDir: DATA_DIR, getSettings: () => SETTINGS })',
-        'const pkgOf = async () => { try { return await adb.currentPackage() } catch (e) { return "" } }',
-        'try {',
-        '  if (op === "dump") {',
-        '    const parsed = parseNodes(await adb.dumpNodes())',
-        '    if (parsed.error) out({ ok: false, error: parsed.error })',
-        '    out({ ok: true, brief: parsed.brief, nodes: parsed.list.map((n) => ({ n: n.n, text: n.text, desc: n.desc, center: n.center, editable: n.editable })) })',
-        '  }',
-        '  if (op === "current") out({ ok: true, pkg: await pkgOf() })',
-        '  if (op === "back" || op === "home") { await adb.pressKey(op); out({ ok: true }) }',
-        '  const pkg = await pkgOf()',
-        '  await safety.checkRate()',
-        '  let verdict = "ALLOW"',
-        '  if (op === "tap") {',
-        '    const x = Number(args[0]), y = Number(args[1])',
-        '    if (!Number.isFinite(x) || !Number.isFinite(y)) out({ ok: false, error: "用法：tap <x> <y> [节点文字]" })',
-        '    verdict = await safety.gate({ pkg, nodeText: String(args[2] || ""), blind: !args[2] })',
-        '  } else if (op === "longpress") {',
-        '    const x = Number(args[0]), y = Number(args[1])',
-        '    if (!Number.isFinite(x) || !Number.isFinite(y)) out({ ok: false, error: "用法：longpress <x> <y> [文字] [ms]" })',
-        '    verdict = await safety.gate({ pkg, nodeText: String(args[2] || ""), blind: !args[2] })',
-        '  } else if (op === "input" || op === "text") {',
-        '    verdict = await safety.gate({ pkg, nodeText: args.join(" ") })',
-        '  } else if (op === "launch") {',
-        '    const cp = safety.checkPackage(String(args[0] || ""))',
-        '    if (!cp.ok) out({ ok: false, error: cp.reason })',
-        '    verdict = await safety.gate({ pkg, nodeText: "" })',
-        '  } else if (!["swipe", "key", "wait"].includes(op)) {',
-        '    out({ ok: false, error: "未知操作：" + op })',
-        '  }',
-        '  if (verdict === "REJECT") out({ ok: false, error: "安全策略拒绝（包名不在白名单）" })',
-        '  if (verdict === "DRY_RUN") out({ ok: false, error: "试运行：动作未执行" })',
-        '  if (verdict === "NEED_CONFIRM") out({ ok: false, needConfirm: true, error: "写操作等待主人批准：请立刻停下任务并如实汇报" })',
-        '  if (op === "tap") await adb.tap(Number(args[0]), Number(args[1]))',
-        '  else if (op === "longpress") await adb.longPress(Number(args[0]), Number(args[1]), Number(args[3] || 800))',
-        '  else if (op === "input" || op === "text") await adb.inputText(args.join(" "))',
-        '  else if (op === "launch") await adb.launchApp(String(args[0] || ""))',
-        '  else if (op === "swipe") await adb.swipe(Number(args[0]), Number(args[1]), Number(args[2]), Number(args[3]), Number(args[4]) || 300)',
-        '  else if (op === "key") await adb.key(String(args[0] || ""))',
-        '  else if (op === "wait") await new Promise((r) => setTimeout(r, Math.min(10000, Number(args[0]) || 1000)))',
-        '  out({ ok: true })',
-        '} catch (e) { out({ ok: false, error: e.message }) }',
-      ].join('\n')
-      writeFileSync(file, body, 'utf8')
-      return file
-    }
-
     // ---- 工作区上下文（adb 由调用方注入，见 startRun）----
     // win 决定决策思考落在哪条工作区会话：
     //   自发（定时器 cron/定时主动逛）→ 共享的「手机逛逛 · 操作决策」一条；
@@ -218,23 +147,12 @@ export default {
     const adhocKey = (goal) => 'adhoc-' + createHash('md5').update(String(goal)).digest('hex').slice(0, 8)
 
     /** 起一个工作区回合；返回 { ok, message }（工具/命令面统一格式）。
-     *  mode：'self' = 定时自发（模块内循环 + 共享决策会话窗）；
-     *        'delegate' = 被调用（默认）——整个任务委派给一个真正的 DSH 子智能体跑
-     *        （hub.runSubagentTurn，delivery='caller'），子级自己驱动 adb 完成任务，
-     *        最终结果经 Promise 返回给调用方，不占用工作区会话窗。 */
-    async function startRun({ flowKey, prompt, packages, report, guide, mode = 'self', source = null }) {
+     *  mode：'self' = 定时自发（共享决策会话窗）；
+     *        'delegate' = 被调用（默认）——独立决策会话窗（task-*），动作仍由模块执行、每一动过 safety.gate。
+     *  方案 A（复审后定）：不再 spawn 子智能体；白名单/限速/写操作确认始终是程序约束，不靠任务书文字。 */
+    async function startRun({ flowKey, prompt, packages, report, guide, mode = 'self' }) {
       const s = getSettings()
       const adb = await getAdb()
-      // 一审 #19-3：委派给子智能体默认关（delegateEnabled）；开着时子级也只用受控动作器（runDelegated 生成 ctl）。
-      if (mode === 'delegate' && s.delegateEnabled) {
-        try {
-          return await runDelegated({ flowKey, prompt, guide, report, source })
-        } catch (e) {
-          // 只有「宿主没有委派服务」才降级；权限类拒绝（没人开口 / 模块没声明能力）必须如实失败，不能偷偷走本地循环
-          if (e.code !== 'SUBAGENT_UNAVAILABLE') throw e
-          api.log.warn(`[phone] 子智能体委派不可用（${e.message}），降级为模块内循环`)
-        }
-      }
       // 模块内循环：每一动都过 safety.gate（程序约束）；会话超时被强制释放时 abort 掉本轮（一审 #19-6）
       currentAbort = new AbortController()
       const ctx = { ...makeCtx(report, makeWin(mode, flowKey, prompt)), adb, signal: currentAbort.signal }
@@ -257,79 +175,13 @@ export default {
         .finally(() => { currentAbort = null })
     }
 
-    /**
-     * delegate 模式：整个任务委派给一个 DSH 子智能体（结果回传调用方）。
-     * 模块把关的部分保留：总开关（入口已查）、会话互斥锁、经验记忆注入与回存、审计日志。
-     * 安全规则（白名单/不碰系统/强停收尾）随任务书写进子级提示词（子级是全新空对话）。
-     */
-    async function runDelegated({ flowKey, prompt, guide, report, source = null }) {
-      const s = getSettings()
-      await session.acquire(flowKey)
-      let ok = false
-      let summary = ''
-      let steps = 0
-      try {
-        const env = await ensureReady()
-        const mem = memory.load(flowKey)
-        const wl = (s.whitelist || []).filter(Boolean)
-        // 一审 #19-3：子级不再直接拿到 adb，只用模块生成的「受控动作器」——每个动作都过 safety 闸门，
-        // 白名单/限速/写操作确认成了程序约束，而不是任务书里的文字约定。
-        const ctl = writeCtl(env.adbPath)
-        const mission = [
-          '你是 Android 手机操作智能体。所有手机动作只能通过下面的受控命令执行（不要直接用 adb，也不要用其它方式碰手机）。',
-          `命令：node "${ctl}" <子命令>`,
-          '  dump                        取当前界面节点（{ok,nodes:[{n,text,desc,center,editable}],brief}）',
-          '  current                     当前前台包名',
-          '  tap <x> <y> [节点文字]       点击坐标（有节点文字就带上，写操作判定更准）',
-          '  longpress <x> <y> [文字] [ms]  长按',
-          '  input <文本>                 输入（仅 ASCII；中文会报错）',
-          '  key <name>                  按键：enter/tab/volume_up/volume_down/power/notifications',
-          '  back / home                 返回 / 桌面',
-          '  launch <包名>                启动应用',
-          '  swipe <x1> <y1> <x2> <y2> [ms]  滑动',
-          '  wait <ms>                   等待',
-          '每次动作返回 JSON；ok=false 且 needConfirm=true 表示写操作在等主人批准——立刻停下、如实汇报，不要绕过。',
-          `【任务】${prompt}`,
-          `【白名单】${wl.length ? wl.join('、') : '不限'}（命令内部会强制校验）`,
-          '【规则】不碰系统设置、不卸载应用、不发短信、不打电话、不改账号；点赞/发布/评论等只在任务明确要求时做。',
-          '【节奏】动作之间等 1~2 秒，界面没变化就重新 dump，不要盲点；连续两次 dump 失败就换思路或停下。',
-          '【最终回答格式】最后一行必须是且只能是：「完成|未完成（N 步）：<一句话总结>」——完成/未完成、步数、总结各占其位。',
-          guide ? `【操作手册（优先照做）】\n${guide}` : '',
-          mem?.summary ? `【历史经验（优先复用）】${mem.summary}` : '',
-        ].filter(Boolean).join('\n')
-        // 权限边界（主仓 #177）：模块声明 plugin-internals + 带主人来源；定时任务要 config.subagentBackground 开
-        const raw = await api.core.hub.runSubagentTurn('phone', `手机逛逛 · ${String(prompt).slice(0, 16)}`, mission, {
-          timeoutMs: s.sessionTimeoutMs,
-          moduleId: 'phone',
-          source,
-        })
-        const text = typeof raw === 'string' ? raw : JSON.stringify(raw ?? '') // 防御：宿主透传非字符串也不炸
-        const m = /（\s*(\d+)\s*步\s*）/.exec(text)
-        steps = m ? Number(m[1]) : 0
-        const line = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => /^(完成|未完成)（\d+ 步）：/.test(l)).pop() || text.trim()
-        ok = !/^未完成（/.test(line)
-        summary = line.replace(/^(完成|未完成)（\d+ 步）：/, '').trim() || line
-      } finally {
-        await memory.save(flowKey, { runLog: { steps, ok, summary }, goal: prompt }).catch((e) => api.log.warn(`[phone] 委派回合记忆写入失败：${e.message}`))
-        safety.log('delegate', `${flowKey} ${ok ? 'ok' : 'fail'} ${summary}`.slice(0, 200)).catch(() => {})
-        session.release(flowKey)
-        if (report) { try { report(null, `手机任务「${prompt}」${ok ? '完成' : '未完成'}：${summary}`) } catch { /* 汇报失败不影响结果 */ } }
-      }
-      return { ok, message: `${ok ? '完成' : '未完成'}（子智能体，${steps} 步）：${summary}`, steps, summary }
-    }
-
     // ---- 跑完流程（参考刷抖音模块）：是否汇报主人（hub.sendText 私聊主人）、是否写入她的记忆 ----
     // mode：'self'（定时自发）| 'delegate'（被调用，默认）——决定决策落在共享会话窗还是独立子智能体窗
-    /** 委派来源（主仓 #177 的权限边界用）：主人私聊 = owner；cron / 无来源 = system（要 config.subagentBackground 打开） */
-    function sourceOf(originChatId = '') {
-      const qq = String(api.config().ownerQQ || '').trim()
-      if (qq && String(originChatId) === `private:${qq}`) return { kind: 'owner', chatId: `private:${qq}` }
-      return { kind: 'system', reason: String(originChatId) === 'cron' ? 'cron' : 'call' }
-    }
     async function runFlow(flow, { originChatId = '', mode = 'self' } = {}) {
       const s = getSettings()
       const guideKey = guides.resolve({ packages: flow.packages, goal: flow.prompt, flowGuide: flow.guide })
-      const r = await startRun({ flowKey: flow.id, prompt: flow.prompt, packages: flow.packages, guide: guides.get(guideKey), mode, source: sourceOf(originChatId) })
+      // 委派来源由宿主判断（#177 复审），模块不再传 source
+      const r = await startRun({ flowKey: flow.id, prompt: flow.prompt, packages: flow.packages, guide: guides.get(guideKey), mode })
       const text = `${flow.name} ${r.message}`
       const to = flow.reportTo || 'origin'
       if (to === 'owner') {
@@ -350,10 +202,10 @@ export default {
     }
 
     /** adhoc 自由推理：按 goal 关键词挑指引，跑完同样走记忆（不主动汇报主人） */
-    function runGoal(goal, mode = 'self', originChatId = '') {
+    function runGoal(goal, mode = 'self') {
       const key = adhocKey(goal)
       const guide = guides.get(guides.resolve({ goal }))
-      return startRun({ flowKey: key, prompt: String(goal), packages: [], guide, mode, source: sourceOf(originChatId) })
+      return startRun({ flowKey: key, prompt: String(goal), packages: [], guide, mode })
     }
 
     // ================= 主动逛一轮（照刷B站：AI 按总纲自己挑应用，开一个工作区回合自主逛） =================
@@ -370,7 +222,7 @@ export default {
       return next
     }
     /** 主动逛一轮：总纲常驻注入 + 决策器落到某个应用时才按需加载该应用手册（省 token）；跑完私聊汇报 + 写记忆 */
-    async function runAutoRound(mode = 'self', originChatId = 'cron') {
+    async function runAutoRound(mode = 'self') {
       const guide = guides.get('main') // 总纲（面板「主流程总纲」卡，可改）
       const guideFor = (pkg) => {
         // 按前台包名挑单应用手册；挑不出专属的就退回通用兜底手册，保底不裸奔
@@ -384,7 +236,6 @@ export default {
         guide,
         guideFor,
         mode,
-        source: sourceOf(originChatId),
       })
       const st = bumpAutoRun()
       const s = getSettings()
@@ -422,7 +273,6 @@ export default {
       try { return hub.turnSendersAllOwner(sid) === true } catch (e) { return false }
     }
     const notOwnerMsg = () => ({ ok: false, message: '手机逛逛的工具只在主人会话里可用（群友/别人的会话不能操作手机）。' })
-    const ownChat = () => 'private:' + String(api.config().ownerQQ || '')
     api.tool(() => [
       api.defineTool({
         name: 'phone_run_flows',
@@ -462,8 +312,8 @@ export default {
         execute: async (_args, exec) => {
           if (!ownerToolCall(exec)) return notOwnerMsg()
           if (!getSettings().enabled) return offMsg()
-          if (session.status().owner) return busyRace(() => runAutoRound('self', ownChat()))
-          return runAutoRound('self', ownChat())
+          if (session.status().owner) return busyRace(() => runAutoRound('self'))
+          return runAutoRound('self')
         },
       }),
       api.defineTool({
@@ -977,7 +827,8 @@ export default {
       run: ({ goal, flowId } = {}) => {
         if (!getSettings().enabled) return Promise.resolve(offMsg())
         // 一审 #19-3：跨模块调用默认走模块内循环（每一动都过安全门）；面板打开「委派给子智能体」才开独立子智能体会话
-        const mode = getSettings().delegateEnabled ? 'delegate' : 'self'
+        // 跨模块调用落独立决策窗（task-*，不串上下文）；动作仍由模块执行、每一动过 safety.gate
+        const mode = 'delegate'
         if (flowId) {
           const flow = flows.get(String(flowId))
           if (!flow) return Promise.resolve({ ok: false, message: `没有流程 ${flowId}` })

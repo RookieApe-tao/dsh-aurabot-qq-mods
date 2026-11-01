@@ -14,7 +14,6 @@ const DEFAULTS = {
   confirmWrites: true,
   dryRun: false,
   closeAppsAfter: true, // 逛完关闭应用进程释放内存：默认开
-  delegateEnabled: false, // 委派给子智能体跑：默认关（开着也走受控动作器）
   sessionTimeoutMs: 900000,
   writeEventMemory: true,
   decisionModel: '',
@@ -371,7 +370,6 @@ return function Panel({ settings, save, toast }) {
     swRow('写操作需确认', 'confirmWrites', '发帖/评论/点赞等写操作先入队等主人批准（默认开）'),
     swRow('试运行', 'dryRun', '只出计划不真点击（默认关）'),
     swRow('逛完关闭应用', 'closeAppsAfter', '任务结束后强停这一轮到过的应用进程，释放手机内存（默认开；桌面不受影响）'),
-    swRow('委派给子智能体', 'delegateEnabled', '默认关：开着时跨模块任务交给独立子智能体跑（子级也只能通过受控动作器操作手机）；关着走模块内循环，每一步都过安全门'),
     swRow('跑完写入她的记忆', 'writeEventMemory', '每次任务结束把结果写一条进记忆模块（默认开）'),
     // 定时主动逛（照刷B站的节奏三件套）
     swRow('定时主动逛', 'autoBrowse', '开着她会在醒着时间内按下面的间隔自己去逛一轮（AI 按总纲挑应用，跑完私聊汇报；默认关）'),

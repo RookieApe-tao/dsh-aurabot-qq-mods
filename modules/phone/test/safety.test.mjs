@@ -151,3 +151,11 @@ test('session：dispose 停清扫并结清排队者', async (t) => {
   assert.deepEqual(r, { ok: false }) // 排队者按未授予结清，不悬挂
   assert.equal(granted.ok, false)
 })
+
+// CI 回归：限速等待曾把 setTimeout unref 掉。调用方在 await 那个 promise，unref 后事件循环可能先空掉，
+// Linux 上 node --test 直接判 cancelledByParent（Promise resolution is still pending but the event loop
+// has already resolved），还会把同文件后续测试一起取消。这条钉死源码不再出现 unref。
+test('限速等待的计时器不能 unref（CI cancelledByParent 回归）', () => {
+  const src = readFileSync(new URL('../lib/safety.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(src, /\.unref/, 'safety.mjs 里不要出现 .unref 调用：等待窗口的 timer 必须留在事件循环里')
+})

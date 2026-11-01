@@ -86,12 +86,15 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
         // 需要等：等最早一条时间戳滑出窗口
         const waitMs = Math.max(0, windowMs - (now - stamps[0]) + 1)
         return new Promise((resolve) => {
+          // 不要 unref：调用方正 await 这个计时器。unref 后事件循环可能先空掉，promise 永远不 resolve
+          // （CI Linux 上 node --test 会直接判 cancelledByParent：「Promise resolution is still pending
+          // but the event loop has already resolved」；生产里同样会悬挂）。
           setTimeout(() => {
             const t = Date.now()
             while (stamps.length > 0 && t - stamps[0] >= windowMs) stamps.shift()
             stamps.push(t)
             resolve('DELAY')
-          }, waitMs).unref?.()
+          }, waitMs)
         })
       }
       stamps.push(now)

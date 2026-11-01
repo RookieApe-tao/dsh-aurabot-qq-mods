@@ -117,7 +117,7 @@ return function Panel({ settings, save, toast }) {
   const pickModel = (v) => lock('model', async () => {
     upd({ decisionModel: v }); await save({ decisionModel: v })
     toast(v ? '决策模型已换：' + v : '已改回跟随全局模型', 'ok')
-  })
+  })()
 
   // ---- 对话测试：面板文本框直接下一句话任务，跑完把结果回显在这张卡里 ----
   const [testGoal, setTestGoal] = useState('')

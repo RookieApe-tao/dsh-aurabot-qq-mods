@@ -86,14 +86,18 @@ async function applyAction(adb, safety, pkg, act, nodeList) {
   // 判定本步涉及的界面文本（供写操作关键词判定）：节点 text **和 content-desc** 都算
   // （一审 #19-4：只有 content-desc 的图标按钮，之前只看 text 会漏判写操作）。
   let nodeText = ''
-  let blind = false // 盲点：坐标点击（没有节点文字）时无法判断是不是写操作
+  let blind = false // 盲点：坐标动作（没有节点文字）时无法判断是不是写操作
   if (act.n != null && act.n !== '') {
     const node = nodeList[Number(act.n)]
     if (!node || !nodeCenter(nodeList, Number(act.n))) return { done: false, note: `节点 ${act.n} 不存在` }
     nodeText = [node.text, node.desc].filter(Boolean).join(' ')
   }
+  // 复审第 4 条：坐标动作（tap/double_tap/long_press）一律按「盲点」算——不能靠模型自己填 text 绕过；
+  // 只有节点模式命中 text/desc 才算有依据。
+  if (!nodeText && ['tap', 'double_tap', 'long_press'].includes(kind)) blind = true
+  // 回车发送：key enter 也会提交内容，写操作确认开着时按写操作处理。
+  if (kind === 'key' && String(act.name || '').toLowerCase() === 'enter' && !nodeText) nodeText = '回车发送'
   if (!nodeText) nodeText = String(act.text || '')
-  if (!nodeText && Array.isArray(act.xy) && ['tap', 'double_tap', 'long_press'].includes(kind)) blind = true
 
   const verdict = await safety.gate({ pkg, nodeText, blind })
   if (verdict === 'NEED_CONFIRM') return { done: true, confirm: true, note: '等待主人批准写操作，回合暂停（phone confirm 查看）' }
@@ -225,7 +229,9 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
   let ok = false
   let summary = ''
   const visited = new Set() // 本轮实际到过的前台包名（含启动过的），收尾关应用释放内存用
-  await session.acquire(flowKey)
+  // 取锁失败（已被别的任务占着）就直接拒绝，别硬跑（复审第 6 条：之前的 {ok:false} 没检查）
+  const lock = await session.acquire(flowKey)
+  if (!lock || lock.ok === false) return { ok: false, steps: 0, summary: '手机正被其他任务占用，稍后再试', visited: [] }
   try {
     const mem = memory.load(flowKey)
     // 提示词注入（省 token）：guide 是常驻的「总纲/主流程」（优先注入）；guideFor(pkg) 按需返回
@@ -305,6 +311,8 @@ export async function runWorkspace({ flowKey = 'adhoc', prompt = '', packages = 
       badSteps = 0 // 拿到合法动作，坏步清零
 
       // ③ 守门 + 执行 + 心跳 + 日志
+      if (ctx.signal?.aborted) { summary = '会话超时被强制释放，回合中止'; break }
+      await safety.checkRate() // 限速：模块内循环与动作器共用同一套滑动窗口（复审第 5 条）
       const result = await applyAction(adb, safety, pkg, act, parsed.list)
       await session.heartbeat(flowKey)
       await safety.log(act.action, result.note).catch((e) => ctx.log?.(`安全审计落盘失败：${e.message}`))

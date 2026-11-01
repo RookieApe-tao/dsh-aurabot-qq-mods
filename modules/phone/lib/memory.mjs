@@ -16,6 +16,13 @@ function clamp(text) {
   return s.length <= SUMMARY_LIMIT ? s : s.slice(0, SUMMARY_LIMIT)
 }
 
+// 隐私过滤：「禁止存密码/Cookie」不能只是 README 里的一句话（复审第 10 条）——写盘前先把
+// 密码/验证码/Cookie/Token/口令 之类连着的值遮掉，避免模型把敏感串写进经验。
+const SECRET = /(密码|验证码|cookie|token|口令|账号)[^\s，。；,;、]{0,30}/gi
+function scrub(text) {
+  return String(text || '').replace(SECRET, '$1（已隐藏）')
+}
+
 export function createMemory({ dataDir, ask = async () => '' }) {
   const fileOf = (key) => path.join(dataDir, 'memory', `${key}.json`)
 
@@ -54,10 +61,10 @@ export function createMemory({ dataDir, ask = async () => '' }) {
         `请把旧经验与本次运行合并成一段不超过300字的可复用操作经验：`,
         `保留仍然有效的点击路径、界面坑位、重试办法；删掉过时内容；不要寒暄，直接给经验正文。`,
       ].join('\n')
-      summary = clamp(await ask(prompt))
+      summary = scrub(clamp(await ask(prompt)))
     } catch (e) {
       // 总结失败不丢数据：退化为旧经验 + 本次一句话
-      summary = clamp(`${prev.summary || ''}（本次：${runLog.summary || '运行' + (runLog.ok ? '成功' : '失败')}）`)
+      summary = scrub(clamp(`${prev.summary || ''}（本次：${runLog.summary || '运行' + (runLog.ok ? '成功' : '失败')}）`))
     }
     const mem = {
       key,

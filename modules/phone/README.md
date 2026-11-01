@@ -31,7 +31,7 @@
 - 「设备」卡片：检测连接的设备（下拉选择），「包名白名单助手」可从手机列出第三方应用一键加入白名单；
 - 面板「手机 ADB 调试与首次授权指引」卡片：第一次连手机照着走——开发者选项 → USB 调试 → 弹窗勾「一律允许」点「允许」完成首次授权（不点允许连不上）。
 
-模块**只访问** platform-tools 的下载地址（mirrors.cloud.tencent.com / googledownloads.cn / dl.google.com），除此之外不访问任何外部网址；与手机的通信全部走本机 adb。
+模块**自身只访问** platform-tools 的下载地址（mirrors.cloud.tencent.com / googledownloads.cn / dl.google.com），除此之外不访问任何外部网址；与手机的通信全部走本机 adb。界面节点/截图会作为决策请求发给你配置的模型服务（见「隐私声明」），那不是模块额外访问的网址。
 
 ## 安全默认值
 

@@ -64,11 +64,12 @@ export default {
     const offMsg = () => ({ ok: false, message: '手机逛逛总开关没开：请先到面板打开「总开关」，她才能碰手机。' })
 
     // ---- 子系统（session/safety/flows/memory 不依赖 adb，可直接建）----
-    // 当前工作区任务的取消器：会话超时被强制释放时 abort 掉旧任务，别让新旧任务同时操作手机（一审 #19-6）
-    let currentAbort = null
+    // 当前工作区任务的取消器（按流程 key 存）：会话超时被强制释放时只 abort 对应任务，
+    // 别误伤排队/正在跑的另一轮（一审 #19-6 / 复审第 6 条）
+    const aborts = new Map()
     const session = createSession({
       timeoutMs: getSettings().sessionTimeoutMs,
-      onSweep: () => { try { currentAbort?.abort(new Error('会话超时被强制释放')) } catch { /* 已结束 */ } },
+      onSweep: (info) => { try { aborts.get(info?.owner)?.abort(new Error('会话超时被强制释放')) } catch { /* 已结束 */ } },
     })
     const safety = createSafety({ dataDir: dataDir(), getSettings })
     const flows = createFlows(dataDir())
@@ -150,13 +151,14 @@ export default {
      *  mode：'self' = 定时自发（共享决策会话窗）；
      *        'delegate' = 被调用（默认）——独立决策会话窗（task-*），动作仍由模块执行、每一动过 safety.gate。
      *  方案 A（复审后定）：不再 spawn 子智能体；白名单/限速/写操作确认始终是程序约束，不靠任务书文字。 */
-    async function startRun({ flowKey, prompt, packages, report, guide, mode = 'self' }) {
+    async function startRun({ flowKey, prompt, packages, report, guide, mode = 'self', maxSteps = 0 }) {
       const s = getSettings()
       const adb = await getAdb()
       // 模块内循环：每一动都过 safety.gate（程序约束）；会话超时被强制释放时 abort 掉本轮（一审 #19-6）
-      currentAbort = new AbortController()
-      const ctx = { ...makeCtx(report, makeWin(mode, flowKey, prompt)), adb, signal: currentAbort.signal }
-      return runWorkspace({ flowKey, prompt, packages, maxSteps: s.maxSteps, guide, ctx })
+      const ac = new AbortController()
+      aborts.set(flowKey, ac)
+      const ctx = { ...makeCtx(report, makeWin(mode, flowKey, prompt)), adb, signal: ac.signal }
+      return runWorkspace({ flowKey, prompt, packages, maxSteps: Number(maxSteps) || s.maxSteps, guide, ctx })
         .then(async (r) => {
           // 收尾：逛完关掉本轮到过的应用进程，释放手机内存（面板「逛完关闭应用」开关，默认开）。
           // 只关确实到过的前台包，跳过桌面（launcher）；单个关失败只记日志，不影响任务结果汇报。
@@ -172,7 +174,7 @@ export default {
           return { ok: r.ok, message: `${r.ok ? '完成' : '未完成'}（${r.steps} 步）：${r.summary}${closedNote}`, steps: r.steps, summary: r.summary }
         })
         .catch((e) => ({ ok: false, message: `工作区启动失败：${e.message}` }))
-        .finally(() => { currentAbort = null })
+        .finally(() => { if (aborts.get(flowKey) === ac) aborts.delete(flowKey) })
     }
 
     // ---- 跑完流程（参考刷抖音模块）：是否汇报主人（hub.sendText 私聊主人）、是否写入她的记忆 ----
@@ -180,8 +182,8 @@ export default {
     async function runFlow(flow, { originChatId = '', mode = 'self' } = {}) {
       const s = getSettings()
       const guideKey = guides.resolve({ packages: flow.packages, goal: flow.prompt, flowGuide: flow.guide })
-      // 委派来源由宿主判断（#177 复审），模块不再传 source
-      const r = await startRun({ flowKey: flow.id, prompt: flow.prompt, packages: flow.packages, guide: guides.get(guideKey), mode })
+      // 委派来源由宿主判断（#177 复审），模块不再传 source；单流程的步数上限可覆盖全局设置
+      const r = await startRun({ flowKey: flow.id, prompt: flow.prompt, packages: flow.packages, guide: guides.get(guideKey), mode, maxSteps: flow.maxSteps })
       const text = `${flow.name} ${r.message}`
       const to = flow.reportTo || 'origin'
       if (to === 'owner') {
@@ -432,8 +434,11 @@ export default {
       if (!ownerQQ || String(msg.userId || '') !== ownerQQ) return false
       const flow = flows.findTrigger(text)
       if (!flow) return false
+      const to = flow.reportTo || 'origin'
       const r = await runFlow(flow, { originChatId: msg.chatId })
-      if ((flow.reportTo || 'origin') !== 'none') await api.reply(msg, r.message)
+      // 复审第 2 条：reportTo=owner 时摘要只走私聊，群里/别人私聊只回一句「已处理」
+      if (to === 'owner') await api.reply(msg, `手机任务「${flow.name}」已处理完，结果私聊汇报给主人。`)
+      else if (to !== 'none') await api.reply(msg, r.message)
       return true // 接管这条消息
     })
 
@@ -775,6 +780,10 @@ export default {
         const body = await api.core.http.body(req).catch(() => ({}))
         const pkg = String(body.pkg || '').trim()
         if (!/^[\w.]+$/.test(pkg)) return json({ ok: false, error: '包名不合法' })
+        // 复审第 9 条：即使总开关开着，「启动看看」也要走白名单与试运行，不绕过安全门
+        const cp = safety.checkPackage(pkg)
+        if (!cp.ok) return json({ ok: false, error: cp.reason || '包名不在白名单' })
+        if (getSettings().dryRun) return json({ ok: false, error: '试运行模式：不真启动应用' })
         const adb = await getAdb()
         await adb.launchApp(pkg)
         return json({ ok: true, message: '已在手机上打开：' + pkg })

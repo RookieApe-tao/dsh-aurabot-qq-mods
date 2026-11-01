@@ -163,7 +163,8 @@ export function createAdb({ adbPath, serial = '', timeoutMs = 10000 } = {}) {
       if (s.includes('/')) {
         const [pkg, act] = s.split('/', 2)
         if (!PKG.test(pkg) || !/^[A-Za-z0-9._$]+$/.test(act || '')) return Promise.reject(new Error(`组件不合法：${s || '(空)'}`))
-        return run(['shell', 'am', 'start', '-n', s]).then(() => undefined)
+        // 只把校验过的两段拼回去，别把原始 s（可能带 `/;id` 之类尾巴）交给 shell（复审第 1 条）
+        return run(['shell', 'am', 'start', '-n', `${pkg}/${act}`]).then(() => undefined)
       }
       if (!PKG.test(s)) return Promise.reject(new Error(`包名不合法：${s || '(空)'}`))
       // monkey 在部分模拟器/精简 ROM 上被裁掉（inaccessible or not found）：

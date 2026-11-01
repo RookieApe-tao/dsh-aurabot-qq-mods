@@ -39,7 +39,7 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
   const confirmDir = join(dataDir, 'confirm')
   const logDir = join(dataDir, 'logs')
   const approvedFile = join(confirmDir, '_approved.json')
-  const stamps = [] // 限速滑动窗口：最近动作时间戳（内存态，重启即清零）
+  // 限速滑动窗口改为文件持久化（rate.json）：模块内循环与不同进程共享，重启也不清零（复审第 5 条）
 
   /** 确认目录就绪。 */
   function ensureDirs() {
@@ -80,6 +80,17 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       const s = getSettings() || {}
       const limit = Number(s.rateLimit) || 0
       const now = Date.now()
+      const file = join(confirmDir, 'rate.json')
+      const load = () => {
+        try {
+          const list = JSON.parse(readFileSync(file, 'utf8'))
+          return Array.isArray(list) ? list.filter(Number.isFinite) : []
+        } catch { return [] }
+      }
+      const save = (list) => {
+        try { ensureDirs(); writeFileSync(file, JSON.stringify(list.slice(-1000))) } catch { /* 落盘失败就退化为内存态 */ }
+      }
+      const stamps = load()
       // 清掉窗口外的旧时间戳
       while (stamps.length > 0 && now - stamps[0] >= windowMs) stamps.shift()
       if (limit > 0 && stamps.length >= limit) {
@@ -91,13 +102,16 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
           // but the event loop has already resolved」；生产里同样会悬挂）。
           setTimeout(() => {
             const t = Date.now()
-            while (stamps.length > 0 && t - stamps[0] >= windowMs) stamps.shift()
-            stamps.push(t)
+            const cur = load()
+            while (cur.length > 0 && t - cur[0] >= windowMs) cur.shift()
+            cur.push(t)
+            save(cur)
             resolve('DELAY')
           }, waitMs)
         })
       }
       stamps.push(now)
+      save(stamps)
       return Promise.resolve('ALLOW')
     },
 
@@ -122,9 +136,10 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       // 3) 写操作需主人确认；已批准过的 同包名+同节点文本 直接放行（但只放行一次，见下）
       if (s.confirmWrites && (safety.isWriteAction(nodeText) || (blind && !nodeText))) {
         const list = readApproved()
-        const i = list.findIndex((x) => x.pkg === pkg && x.nodeText === nodeText)
+        // 复审第 8 条：批准 10 分钟内有效且一次性（命中即消耗）；过期的不再放行
+        const fresh = (x) => !x.at || Date.now() - Date.parse(x.at) <= 10 * 60_000
+        const i = list.findIndex((x) => x.pkg === pkg && x.nodeText === nodeText && fresh(x))
         if (i >= 0) {
-          // 一审 #19-8：「批准一次」就只放行这一次——命中即消耗，别让同名按钮以后都放行。
           list.splice(i, 1)
           writeApproved(list)
         } else {

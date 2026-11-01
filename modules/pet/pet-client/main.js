@@ -1773,6 +1773,9 @@ function openChatWin() {
   chatWin.on('closed', () => { chatWin = null; reportChatState() })
   reportChatState()
 }
+// 服务端认为「窗口 5 分钟没续报 = 已关」；窗口一直开着就每 2 分钟续报一次，
+// 否则超时后回复会错走桌面气泡（一审 #18-1）。
+setInterval(() => { if (chatWinAlive()) reportChatState() }, 120_000).unref?.()
 function toggleChat() {
   if (!chatCfg.enabled) return
   if (chatWinAlive()) closeChatWin()

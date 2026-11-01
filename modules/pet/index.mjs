@@ -126,8 +126,8 @@ export default {
     { key: 'petChatHotkey', label: '对话框快捷键', type: 'text', hint: '全局快捷键，按一次开、再按一次关（如 Alt+P）。留空 = 不启用；被别的程序占用时注册失败，桌宠会气泡提醒一次、功能保持关闭，此处的当前注册状态看「状态」卡' },
     { key: 'petChatCloseKeyword', label: '关闭对话框的关键字', type: 'text', hint: '在对话框输入框里发送这句话 → 直接关窗、不请求模型。留空 = 不启用关键字关闭' },
     { key: 'petChatBlurHide', label: '失焦自动收起', type: 'switch', hint: '点别处（对话框失焦）时自动收起小窗' },
-    { key: 'petChatMaxEntries', label: '对话历史最多保留条数', type: 'number', min: 10, max: 2000, hint: '对话历史只存桌宠本地（不进 QQ、不进工作区持久化），超限从头部截断；界面默认显示最近 50 条' },
-    { key: 'petChatRetentionDays', label: '对话历史保留天数', type: 'number', min: 0, max: 3650, hint: '0 = 永久保留；否则启动时 + 每日清理过期记录' },
+    { key: 'petChatMaxEntries', label: '对话历史最多保留条数', type: 'number', min: 10, max: 2000, hint: '本地小窗历史只存桌宠数据目录（不进 QQ、不进聊天记录），超限从头部截断；界面默认显示最近 50 条。注意：对话内容会作为模型请求发出去，模型自己决定记进长期记忆的条目另存，不受这里的条数/天数限制' },
+    { key: 'petChatRetentionDays', label: '对话历史保留天数', type: 'number', min: 0, max: 3650, hint: '0 = 永久保留；否则启动时 + 每日清理本地小窗历史（只管小窗历史，管不到模型记下的长期记忆）' },
     // 天气（一期）：进 prompt 的「现在」段，她聊到出门/穿衣/下雨时接得上
     { key: 'petWeatherCity', label: '天气城市', type: 'text', hint: '填城市名（如 上海）才接入天气；留空 = 不接入，所有天气逻辑静默跳过。填了之后插件会向天气接口（默认 wttr.in，可在下方替换地址）请求这个城市的天气，结果只进 prompt 和本地缓存，不会发给聊天对象；天气接口本身会看到城市名' },
     { key: 'petWeatherUrl', label: '天气接口地址', type: 'text', hint: '高级：接口模板，{city} 会被替换成编码后的城市名，返回纯文本即可（如 https://wttr.in/{city}?format=%C+%t）。留空 = 用内置默认（wttr.in，免 key）；请求失败保留上一次缓存、不打扰' },
@@ -2022,7 +2022,10 @@ export default {
         try {
           const o = JSON.parse(t)
           if (o && typeof o === 'object' && typeof o.text === 'string' && o.text && (o.role === 'user' || o.role === 'pet')) {
-            out.push({ ts: Number(o.ts) || Date.now(), role: o.role, text: String(o.text).slice(0, 600) })
+            const item = { ts: Number(o.ts) || Date.now(), role: o.role, text: String(o.text).slice(0, 600) }
+            // 历史也带 messageId：开窗拉历史后，迟到的 chat 事件才能按 id 去重（复审 #18-3）
+            if (o.messageId) item.messageId = String(o.messageId).slice(0, 40)
+            out.push(item)
           }
         } catch {} // 坏行丢弃，宁可少一条也不让面板炸
       }
@@ -2030,13 +2033,16 @@ export default {
     }
     const chatHistory = (limit = 50) => readChatHistoryRaw().slice(-Math.max(1, Math.min(2000, Math.round(Number(limit) || 50))))
     /** 追加一条 + 超限头部截断（重写文件）。 */
-    function appendChatHistory(role, text) {
+    function appendChatHistory(role, text, messageId = '') {
       return withChatLock(() => {
         const t = String(text || '').trim()
         if (!t) return
         const st = petChatSettings()
         mkdirSync(dirname(chatHistFile()), { recursive: true })
-        appendFileSync(chatHistFile(), JSON.stringify({ ts: Date.now(), role, text: t.slice(0, 600) }) + '\n')
+        const item = { ts: Date.now(), role, text: t.slice(0, 600) }
+        // 历史也带 messageId：开窗拉历史后，迟到的 chat 事件靠它去重（一审 #18-3）
+        if (messageId) item.messageId = String(messageId).slice(0, 40)
+        appendFileSync(chatHistFile(), JSON.stringify(item) + '\n')
         const all = readChatHistoryRaw()
         if (all.length > st.maxEntries) {
           writeFileSync(chatHistFile(), all.slice(-st.maxEntries).map((x) => JSON.stringify(x)).join('\n') + '\n')
@@ -2065,6 +2071,7 @@ export default {
     const WEATHER_TTL_MS = 30 * MIN_MS // ≥30 分钟刷新一次（api.every 低频兜底 + prompt 命中即取缓存）
     let weatherCache = { at: 0, city: '', text: '' }
     let weatherFetching = false
+    let weatherFailAt = 0 // 上次失败时间：失败后也歇 30 分钟再试（一审 #18-5）
     function weatherUrlTemplate() {
       const raw = String(api.settings().petWeatherUrl || '').trim()
       return /^https?:\/\//i.test(raw) && raw.includes('{city}') ? raw : DEFAULT_WEATHER_URL
@@ -2074,15 +2081,17 @@ export default {
       const st = petChatSettings()
       if (!st.weatherCity || weatherFetching) return
       if (weatherCache.city === st.weatherCity && Date.now() - weatherCache.at < WEATHER_TTL_MS) return
+      // 失败也要歇 30 分钟：否则每次 prompt 都会重试，间隔根本保证不了（一审 #18-5）
+      if (Date.now() - weatherFailAt < WEATHER_TTL_MS) return
       weatherFetching = true
       try {
         const url = weatherUrlTemplate().replace('{city}', encodeURIComponent(st.weatherCity))
         const fetchFn = petHooks.fetchWeather || ((u) => fetch(u, { signal: AbortSignal.timeout(10_000) }))
         const res = await fetchFn(url)
-        if (!res.ok) return
+        if (!res.ok) { weatherFailAt = Date.now(); return }
         const text = String(await res.text() || '').replace(/\s+/g, ' ').trim().slice(0, 40)
-        if (text) weatherCache = { at: Date.now(), city: st.weatherCity, text }
-      } catch {} // 失败保留上一次缓存（可能过期，但好过没有），绝不打扰
+        if (text) { weatherCache = { at: Date.now(), city: st.weatherCity, text }; weatherFailAt = 0 } else { weatherFailAt = Date.now() }
+      } catch { weatherFailAt = Date.now() } // 失败保留上一次缓存（可能过期，但好过没有），绝不打扰
       finally { weatherFetching = false }
     }
     /** prompt「现在」段用的一行天气；城市没配 / 还没拉到 → 空串（不进 prompt）。 */
@@ -2169,44 +2178,50 @@ export default {
       if (!online().online) return { ok: false, reason: 'pet-offline' }
       if (focusOn()) return { ok: false, reason: 'focus' }
       if (petChatBusy) return { ok: false, reason: 'thinking' }
-      // 关键字拦截（服务端兜底；客户端发送前也会先查一遍）：命中直接关窗、不请求模型、不落历史
-      if (st.closeKeyword && text.includes(st.closeKeyword)) {
-        emit('chatClose', {})
-        return { ok: true, closed: true }
-      }
-      const winOpen = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
-      const history = readChatHistoryRaw()
-      const prevText = [...history].reverse().find((x) => x.role === 'user')?.text || ''
-      await appendChatHistory('user', text) // 落盘进锁链（与清理互斥；await 保证时序可测）
-      let raw = ''
+      // 同步占锁：检查与置位之间不能再有 await，否则并发请求会一起通过检查（一审 #18-4）
       petChatBusy = true
       try {
-        const prompt = petChatPrompt(text, prevText)
-        if (typeof api.think === 'function') {
-          raw = await api.think(prompt, { title: PETCHAT_TURN_TITLE, timeoutMs: 120_000, noTools: true, key: 'petChat' })
-        } else if (typeof api.ask === 'function') { // 老宿主没有 api.think：退回单次问答（工作区看不到思考）
-          raw = await api.ask({ text: prompt, maxTokens: 300, temperature: 0.8 })
+        // 关键字拦截（服务端兜底；客户端发送前也会先查一遍）：命中直接关窗、不请求模型、不落历史
+        if (st.closeKeyword && text.includes(st.closeKeyword)) {
+          emit('chatClose', {})
+          return { ok: true, closed: true }
         }
-      } catch (error) {
-        api.log.debug?.('对话框生成失败：', String(error?.message || error))
-      } finally { petChatBusy = false }
-      const { text: reply, memo } = parseChatReply(raw)
-      if (!reply) {
-        await appendChatHistory('pet', '（没答上来）')
-        if (winOpen) emit('chat', { text: '（她走神了，再说一遍？）', messageId: randomBytes(6).toString('hex'), windowOpen: true })
-        return { ok: false, reason: 'empty' }
+        const winOpen = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
+        const history = readChatHistoryRaw()
+        const prevText = [...history].reverse().find((x) => x.role === 'user')?.text || ''
+        const userMsgId = randomBytes(6).toString('hex')
+        await appendChatHistory('user', text, userMsgId) // 落盘进锁链（与清理互斥；await 保证时序可测）
+        let raw = ''
+        try {
+          const prompt = petChatPrompt(text, prevText)
+          if (typeof api.think === 'function') {
+            raw = await api.think(prompt, { title: PETCHAT_TURN_TITLE, timeoutMs: 120_000, noTools: true, key: 'petChat' })
+          } else if (typeof api.ask === 'function') { // 老宿主没有 api.think：退回单次问答（工作区看不到思考）
+            raw = await api.ask({ text: prompt, maxTokens: 300, temperature: 0.8 })
+          }
+        } catch (error) {
+          api.log.debug?.('对话框生成失败：', String(error?.message || error))
+        }
+        const { text: reply, memo } = parseChatReply(raw)
+        if (!reply) {
+          await appendChatHistory('pet', '（没答上来）')
+          if (winOpen) emit('chat', { text: '（她走神了，再说一遍？）', messageId: randomBytes(6).toString('hex'), windowOpen: true })
+          return { ok: false, reason: 'empty' }
+        }
+        if (memo) chatMemoryAdd(memo) // 模型决定记什么，不做自动全文提炼（防灌库）；about 归主人
+        const messageId = randomBytes(6).toString('hex')
+        await appendChatHistory('pet', reply, messageId)
+        // 回复下发：对话框开着 → 进消息流；途中窗被关 → 走碎碎念气泡（同一套气泡渲染）。绝不发 QQ。
+        const winOpenNow = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
+        if (winOpenNow) {
+          emit('chat', { text: reply, messageId, windowOpen: true })
+          return { ok: true, text: reply, viaWindow: true, messageId }
+        }
+        await dispatch({ text: reply.slice(0, 600), modality: 'text', purpose: 'whisper', via: 'pet', noFallback: true })
+        return { ok: true, text: reply, viaWindow: false, messageId }
+      } finally {
+        petChatBusy = false
       }
-      if (memo) chatMemoryAdd(memo) // 模型决定记什么，不做自动全文提炼（防灌库）；about 归主人
-      await appendChatHistory('pet', reply)
-      // 回复下发：对话框开着 → 进消息流；途中窗被关 → 走碎碎念气泡（同一套气泡渲染）。绝不发 QQ。
-      const messageId = randomBytes(6).toString('hex')
-      const winOpenNow = chatWin.open && Date.now() - chatWin.at <= CHAT_WIN_TTL_MS
-      if (winOpenNow) {
-        emit('chat', { text: reply, messageId, windowOpen: true })
-        return { ok: true, text: reply, viaWindow: true, messageId }
-      }
-      await dispatch({ text: reply.slice(0, 600), modality: 'text', purpose: 'whisper', via: 'pet', noFallback: true })
-      return { ok: true, text: reply, viaWindow: false, messageId }
     }
     function petChatStatus() {
       const st = petChatSettings()

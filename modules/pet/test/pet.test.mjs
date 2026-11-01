@@ -1318,6 +1318,22 @@ test('对话框：闸门链——默认关 / 离线 / 专注 / 并发锁 / 关�
   assert.ok(ev.events.some((e) => e.type === 'chatClose'), '下发 chatClose 让客户端关窗')
 })
 
+test('对话框并发：两个请求同时进，只有一个通过（检查与占位之间不能有 await）', async () => {
+  const env = startModule({ settings: { petChatEnabled: true } })
+  await env.connect()
+  let release
+  env.setThinkReply('嗯')
+  env.holdThink(new Promise((resolve) => { release = resolve }))
+  // 同步发起两句：第一句同步占位后进模型，第二句必须立即 thinking（复审 #18-4 的竞态）
+  const first = env.exports.petChat('第一句')
+  const second = await env.exports.petChat('第二句')
+  assert.equal(second.ok, false)
+  assert.equal(second.reason, 'thinking', '检查与占位之间不能 await，否则两个都能过')
+  release()
+  assert.equal((await first).ok, true)
+  env.holdThink(null)
+})
+
 test('对话框：管线——独立回合 key=petChat、走私聊主人记忆（recallHint 读 / [记] 写归主人）、窗开走 chat 事件、窗关走气泡', async () => {
   const env = startModule({ settings: { petChatEnabled: true } })
   env.setMemHint('（你记得这些事…）')
@@ -1355,6 +1371,8 @@ test('对话框：管线——独立回合 key=petChat、走私聊主人记忆�
   const h = await env.call('/chat/history', { query: { limit: 50 } })
   assert.deepEqual(h.json.items.map((x) => x.role), ['user', 'pet'])
   assert.equal(h.json.items[1].text, '嗯嗯，我在的', '[记] 备忘不进历史与气泡')
+  // 历史也带 messageId：开窗拉历史后，迟到的 chat 事件才能按 id 去重（复审 #18-3）
+  assert.equal(h.json.items[1].messageId, r.json.messageId, '回复的历史项要带同一个 messageId')
 
   // 回复途中窗被关：改走碎碎念气泡（proactive，purpose=whisper，绝不发 QQ）
   await env.call('/chat/state', { method: 'POST', json: { open: false } })

@@ -48,7 +48,7 @@ function add(role, text, id) {
   msgs.scrollTop = msgs.scrollHeight
 }
 // main.js 注入入口：历史（开窗时一次）/ 单条回复 / 提示（她在想上一句等）
-window.__chatSetHistory = (items) => { msgs.innerHTML = ''; seen.clear(); for (const it of (items || [])) add(it.role, it.text) }
+window.__chatSetHistory = (items) => { msgs.innerHTML = ''; seen.clear(); for (const it of (items || [])) add(it.role, it.text, it.messageId) }
 window.__chatAppend = (text, id) => add('pet', text, id)
 window.__chatUser = (text, id) => add('user', text, id)
 window.__chatHint = (text) => add('hint', text)

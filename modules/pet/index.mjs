@@ -34,7 +34,7 @@ const MIN_MS = 60_000            // 一分钟（碎碎念间隔/静默窗口都�
 export default {
   id: 'pet',
   name: '桌宠',
-  version: '1.0.6',
+  version: '1.0.7',
   api: 1,
   description: '把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。',
 

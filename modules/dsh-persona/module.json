@@ -1,7 +1,7 @@
 {
   "id": "dsh-persona",
   "name": "DSH 人设与风格",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "把一张人格连同思考/回复风格注入 DSH 的所有会话（像 dsh-cosplay），不改变大肥鱼 QQ 聊天用的人格。默认不注入，关掉即撤销。",
   "category": "manage",
   "tags": ["dsh", "人设", "思考风格", "回复风格", "角色扮演"],

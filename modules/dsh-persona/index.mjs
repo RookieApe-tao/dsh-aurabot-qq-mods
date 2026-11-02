@@ -80,7 +80,7 @@ export function normalizeStyle(s = {}) {
 export default {
   id: 'dsh-persona',
   name: 'DSH 人设与风格',
-  version: '1.0.0',
+  version: '1.0.1',
   api: 1,
   description: '把一张人格连同思考/回复风格注入 DSH 的所有会话（像 dsh-cosplay），不改变大肥鱼 QQ 聊天用的人格。默认不注入，关掉即撤销。',
   settings: [], // 面板走 panel.js 自绘（下拉框 + 风格按钮 + 确认生效），不用自动表单

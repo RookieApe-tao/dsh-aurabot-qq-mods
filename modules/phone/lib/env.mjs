@@ -8,7 +8,8 @@
  *      临时 zip 下载完即删。全程零 npm 依赖（node: 内置 + 全局 fetch）。
  */
 import { execFile } from 'node:child_process'
-import { createWriteStream, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -41,6 +42,17 @@ async function download(url, dest) {
   if (!res.body) throw new Error(`下载失败（无响应体）: ${url}`)
   const out = createWriteStream(dest)
   await pipeline(Readable.fromWeb(res.body), out)
+}
+
+/** 边读边算 sha256（zip ~6MB，流式读不用整个进内存）。 */
+function sha256File(file) {
+  return new Promise((resolve, reject) => {
+    const h = createHash('sha256')
+    const stream = createReadStream(file)
+    stream.on('data', (c) => h.update(c))
+    stream.on('end', () => resolve(h.digest('hex')))
+    stream.on('error', reject)
+  })
 }
 
 /** 在目录里递归找 adb 可执行文件（zip 解压后位置可能带 platform-tools/ 一层或不带）。 */
@@ -97,11 +109,15 @@ export async function ensureAdb({ adbPath = '', dataDir, log = () => {} } = {}) 
     if (existing && (await adbWorks(existing))) {
       return { adbPath: existing, installed: false, source: 'auto' }
     }
-    // 国内镜像在前（腾讯、Google 中国下载站），Google 官方殿后；三个地址本机实测同源同包
+    // 钉死版本 + 官方 sha256（P1-1，复审要求）：不再用「latest」——版本一变哈希就废。
+    // dl.google.com / googledownloads.cn / 腾讯镜像三源实测逐字节一致（2026-11-02 各下载一份比对）。
+    // 升级 platform-tools：换 PT_VERSION + 重新算官方 zip 的 sha256 改 PT_SHA256。
+    const PT_VERSION = 'r34.0.5'
+    const PT_SHA256 = '3f8320152704377de150418a3c4c9d07d16d80a6c0d0d8f7289c22c499e33571'
     const mirrors = [
-      'https://mirrors.cloud.tencent.com/AndroidSDK/platform-tools-latest-windows.zip',
-      'https://googledownloads.cn/android/repository/platform-tools-latest-windows.zip',
-      'https://dl.google.com/android/repository/platform-tools-latest-windows.zip',
+      `https://mirrors.cloud.tencent.com/AndroidSDK/platform-tools_${PT_VERSION}-windows.zip`,
+      `https://googledownloads.cn/android/repository/platform-tools_${PT_VERSION}-windows.zip`,
+      `https://dl.google.com/android/repository/platform-tools_${PT_VERSION}-windows.zip`,
     ]
     const zip = join(dataDir, `platform-tools-tmp-${Date.now()}.zip`)
     let ok = false
@@ -110,9 +126,13 @@ export async function ensureAdb({ adbPath = '', dataDir, log = () => {} } = {}) 
       try {
         log('info', `尝试下载 platform-tools: ${url}`)
         await download(url, zip)
+        // 哈希对不上就删掉换下一个镜像——镜像被篡改/塞了别的包也过不了这关
+        const got = await sha256File(zip)
+        if (got !== PT_SHA256) throw new Error(`sha256 不匹配：拿到 ${got.slice(0, 12)}…，期望 ${PT_SHA256.slice(0, 12)}…`)
         ok = true
         break
       } catch (e) {
+        rmSync(zip, { force: true }) // 坏包立刻清掉
         errs.push(`${new URL(url).host}: ${e.message}`)
         log('warn', `下载失败，换下一个镜像: ${e.message}`)
       }

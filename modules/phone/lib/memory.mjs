@@ -24,7 +24,12 @@ function scrub(text) {
 }
 
 export function createMemory({ dataDir, ask = async () => '' }) {
-  const fileOf = (key) => path.join(dataDir, 'memory', `${key}.json`)
+  // key 白名单（复审 P0-1）：面板/工具传入的 key 直接拼路径，`../../xxx` 能越目录读写任意 .json
+  const fileOf = (key) => {
+    const k = String(key || '')
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(k)) throw new Error(`不合法的记忆 key：${k.slice(0, 40)}`)
+    return path.join(dataDir, 'memory', `${k}.json`)
+  }
 
   /** 读取一段记忆；不存在/损坏返回 null */
   const load = (key) => {

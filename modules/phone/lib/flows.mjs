@@ -37,9 +37,11 @@ export function createFlows(dataDir) {
     return flow ? { id, ...flow } : null
   }
 
-  /** 新建或合并更新一个流程；patch 里缺的旧字段保留 */
+  /** 新建或合并更新一个流程；patch 里缺的旧字段保留。
+   *  id 白名单（复审 P0-1）：id 会被当 flowKey 拼进记忆路径，不放行任何带路径字符的值。 */
   const upsert = (id, patch) => {
     if (!id || typeof id !== 'string') throw new Error('流程 id 不能为空')
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) throw new Error(`不合法的流程 id：${id.slice(0, 40)}（只能字母/数字/短横线/下划线，≤40 字）`)
     const flows = readFlows(dataDir)
     const prev = flows[id] || {}
     const next = { ...prev, ...patch }

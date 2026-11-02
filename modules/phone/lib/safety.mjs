@@ -16,8 +16,16 @@
 import { existsSync, mkdirSync, appendFileSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-/** 写操作关键词（契约逐字）。 */
-const WRITE_KEYWORDS = ['发布', '发送', '评论', '回复', '点赞', '关注', '删除', '确认', '发帖', '转发', '私信']
+/** 写操作关键词：中文逐字 + 常见英文（isWriteAction 大小写不敏感）。
+ *  宁多勿漏：多弹一次确认无害，漏一个词就是真把帖子发出去了（复审 P0-2）。 */
+const WRITE_KEYWORDS = [
+  '发布', '发送', '评论', '回复', '点赞', '关注', '删除', '确认', '发帖', '转发', '私信',
+  '确定', '同意', '提交', '支付', '付款', '购买', '下单', '充值', '打赏', '卸载', '安装',
+  '登录', '登陆', '注册', '绑定', '授权', '开通', '续费', '投币', '收藏', '分享',
+  'publish', 'post', 'comment', 'reply', 'like', 'follow', 'delete', 'remove', 'confirm',
+  'submit', 'send', 'share', 'pay', 'payment', 'checkout', 'order', 'buy', 'purchase',
+  'subscribe', 'renew', 'uninstall', 'install', 'login', 'signin', 'sign up', 'authorize',
+]
 
 /** 本地日期（按本机时区）YYYY-MM-DD，用于日志按天分文件。 */
 function localDate(d = new Date()) {
@@ -80,7 +88,8 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       const s = getSettings() || {}
       const limit = Number(s.rateLimit) || 0
       const now = Date.now()
-      const file = join(confirmDir, 'rate.json')
+      // rate.json 放 dataDir 根，别混进 confirm/——listConfirms 扫的就是那个目录（复审 P1-3）
+      const file = join(dataDir, 'rate.json')
       const load = () => {
         try {
           const list = JSON.parse(readFileSync(file, 'utf8'))
@@ -115,10 +124,10 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       return Promise.resolve('ALLOW')
     },
 
-    /** 按关键词判定是否写操作。 */
+    /** 按关键词判定是否写操作（大小写不敏感；英文/支付类词也要拦，复审 P0-2）。 */
     isWriteAction(text) {
-      const s = String(text || '')
-      return WRITE_KEYWORDS.some((k) => s.includes(k))
+      const s = String(text || '').toLowerCase()
+      return WRITE_KEYWORDS.some((k) => s.includes(k.toLowerCase()))
     },
 
     /**

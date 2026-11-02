@@ -175,9 +175,12 @@ export function createGuides(dataDir) {
       writeCustom(dataDir, key, { name, text })
       return { key, name: name || key, source: 'custom', packages: packages || [], keywords: keywords || [], text: String(text || '') }
     },
-    /** 删自定义层（回到内置；内置 generic 删不掉） */
+    /** 删自定义层（回到内置；内置 generic 删不掉）。
+     *  key 白名单（复审 P0-1）：key 直接拼路径，`../../xxx` 能删任意 .md。 */
     remove(key) {
-      const p = join(dataDir, 'guides', `${key}.md`)
+      const k = String(key || '')
+      if (!/^[A-Za-z0-9_-]{1,40}$/.test(k)) return false
+      const p = join(dataDir, 'guides', `${k}.md`)
       if (!existsSync(p)) return false
       unlinkSync(p)
       return true

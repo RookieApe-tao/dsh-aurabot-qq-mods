@@ -326,8 +326,8 @@ export default {
         execute: async ({ goal }, exec) => {
           if (!ownerToolCall(exec)) return notOwnerMsg()
           if (!getSettings().enabled) return offMsg()
-          if (session.status().owner) return busyRace(() => runGoal(goal, 'self', ownChat()))
-          return runGoal(goal, 'self', ownChat())
+          if (session.status().owner) return busyRace(() => runGoal(goal, 'self'))
+          return runGoal(goal, 'self')
         },
       }),
     ])
@@ -488,17 +488,21 @@ export default {
 
     // ================= 面板路由（精确匹配，前缀 /aurabot/api/ext/phone）=================
     const json = (data) => data // route 返回对象即 JSON
+    // id/key 白名单（复审 P0-1）：这些值会被拼进文件路径，路由层先拦一道，报错也好懂
+    const SAFE_KEY = /^[A-Za-z0-9_-]{1,40}$/
     let lastPanelRun = null // 面板「对话测试」最近一次任务：{ goal, ok, message, steps, running, at }
     api.route('/flows', async (req, res) => {
       if (req.method === 'GET') return json({ flows: flows.list() })
       if (req.method === 'POST') {
         const body = await api.core.http.body(req).catch(() => ({}))
         if (!body.id) return json({ ok: false, error: '缺少 id' })
+        if (!SAFE_KEY.test(String(body.id))) return json({ ok: false, error: `不合法的流程 id（只能字母/数字/短横线/下划线，≤40 字）：${String(body.id).slice(0, 40)}` })
         const flow = flows.upsert(String(body.id), body.patch || body)
         return json({ ok: true, flow })
       }
       if (req.method === 'DELETE') {
         const id = new URL(req.url, 'http://x').searchParams.get('id')
+        if (!SAFE_KEY.test(String(id || ''))) return json({ ok: false, error: '不合法的流程 id' })
         return json({ ok: flows.remove(id) })
       }
       return json({ ok: false, error: '不支持的方法' })
@@ -527,6 +531,9 @@ export default {
     api.route('/memory', (req, res) => {
       const url = new URL(req.url, 'http://x')
       const key = url.searchParams.get('key')
+      if ((req.method === 'GET' || req.method === 'DELETE') && !SAFE_KEY.test(String(key || ''))) {
+        return json({ ok: false, error: '不合法的记忆 key' })
+      }
       if (req.method === 'GET') {
         if (!key) return json({ error: '需要 key 参数' })
         return json({ memory: memory.load(key) })

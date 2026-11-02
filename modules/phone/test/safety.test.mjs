@@ -84,8 +84,55 @@ test('dryRun：只出计划，返回 DRY_RUN 不落确认', async (t) => {
   assert.deepEqual(s.listConfirms(), []) // dryRun 不堆积确认项
 })
 
-test('操作日志按天落盘 ops-YYYY-MM-DD.log', async (t) => {
+test('盲点+填了无害文字：照样 NEED_CONFIRM（复审残留 P0-2，不许靠 act.text 绕确认）', async (t) => {
   const dir = tempDir(t)
+  const s = createSafety({
+    dataDir: dir,
+    getSettings: () => ({ whitelist: [], rateLimit: 0, confirmWrites: true, dryRun: false }),
+  })
+  // 坐标点击（blind=true）即使模型给动作填了「刷新」这种浏览类文字，也必须弹确认
+  assert.equal(await s.gate({ pkg: 'com.a', nodeText: '刷新', blind: true }), 'NEED_CONFIRM')
+  assert.equal(s.listConfirms().length, 1)
+  // 盲点不带文字同样弹确认（原行为保持）
+  assert.equal(await s.gate({ pkg: 'com.a', nodeText: '', blind: true }), 'NEED_CONFIRM')
+  // 非盲点浏览类仍放行
+  assert.equal(await s.gate({ pkg: 'com.a', nodeText: '刷新' }), 'ALLOW')
+})
+
+test('确认项 id 越界：approve/reject 直接拒绝，不删任何文件（复审残留 P0-1）', async (t) => {
+  const dir = tempDir(t)
+  const s = createSafety({
+    dataDir: dir,
+    getSettings: () => ({ whitelist: [], rateLimit: 0, confirmWrites: true, dryRun: false }),
+  })
+  await s.gate({ pkg: 'com.a', nodeText: '发布' })
+  const before = s.listConfirms().length
+  // `../../x` 越界 id：不能删 confirm 目录外的任何 .json
+  assert.equal(s.rejectConfirm('../../victim'), false)
+  assert.equal(s.approveConfirm('../../victim'), false)
+  assert.equal(s.rejectConfirm('..\\victim'), false)
+  assert.equal(s.rejectConfirm('a'.repeat(41)), false, '超长 id 也拒')
+  assert.equal(s.listConfirms().length, before, '合法确认项不受影响')
+  // 越界时也不能在目录外留下批准记录
+  assert.equal(existsSync(join(dir, 'victim.json')), false)
+})
+
+test('rate.json 不出现在待确认列表（P1-3 回归）', async (t) => {
+  const dir = tempDir(t)
+  const s = createSafety({
+    dataDir: dir,
+    getSettings: () => ({ whitelist: [], rateLimit: 5, confirmWrites: true, dryRun: false }),
+  })
+  await s.checkRate() // 会在 dataDir 根写 rate.json
+  await s.gate({ pkg: 'com.a', nodeText: '发布' })
+  const items = s.listConfirms()
+  assert.equal(items.length, 1, '只应有那一条写确认')
+  assert.ok(!items.some((x) => String(x.id || '').startsWith('_')), '不混入元数据文件')
+  assert.ok(existsSync(join(dir, 'rate.json')), 'rate.json 在 dataDir 根')
+  assert.equal(existsSync(join(dir, 'confirm', 'rate.json')), false)
+})
+
+test('操作日志按天落盘 ops-YYYY-MM-DD.log', async (t) => {  const dir = tempDir(t)
   const s = createSafety({ dataDir: dir, getSettings: () => ({}) })
   s.log('tap', '节点[0] 按钮"发布"')
   s.log('gate', 'REJECT com.other')

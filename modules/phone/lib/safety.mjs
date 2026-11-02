@@ -33,7 +33,11 @@ function localDate(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/** 生成确认项 id：时间戳+随机，保证唯一。 */
+/** 确认项 id 白名单：id 会拼进 confirm/ 目录文件路径，`../../x` 之类的越界值一律拒绝
+ *  （复审残留 P0-1：safety 还导出给别的模块用，必须在底层拦，路由层再拦一道）。 */
+const SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/
+
+/** 生成确认项 id：时间戳+随机，保证唯一（天然满足 SAFE_ID）。 */
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
@@ -142,8 +146,10 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       // 2) 试运行：只出计划不真点击（先于确认，避免 dryRun 期间堆积确认项）
       const s = getSettings() || {}
       if (s.dryRun) return 'DRY_RUN'
-      // 3) 写操作需主人确认；已批准过的 同包名+同节点文本 直接放行（但只放行一次，见下）
-      if (s.confirmWrites && (safety.isWriteAction(nodeText) || (blind && !nodeText))) {
+      // 3) 写操作需主人确认；已批准过的 同包名+同节点文本 直接放行（但只放行一次，见下）。
+      //    blind 一律按写操作处理（复审残留 P0-2）：盲点就是无法判断，不能因为模型顺手填了
+      //    「刷新」之类的文字就 ALLOW——宁可多弹一次确认。
+      if (s.confirmWrites && (safety.isWriteAction(nodeText) || blind)) {
         const list = readApproved()
         // 复审第 8 条：批准 10 分钟内有效且一次性（命中即消耗）；过期的不再放行
         const fresh = (x) => !x.at || Date.now() - Date.parse(x.at) <= 10 * 60_000
@@ -177,8 +183,9 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
         .sort((a, b) => (a.at < b.at ? -1 : 1))
     },
 
-    /** 批准某确认项：删确认文件 + 记入已批准集合，后续同动作 gate 直接放行。 */
+    /** 批准某确认项：删确认文件 + 记入已批准集合，后续同动作 gate 直接放行。id 越界直接拒绝。 */
     approveConfirm(id) {
+      if (!SAFE_ID.test(String(id || ''))) return false
       const file = join(confirmDir, `${id}.json`)
       if (!existsSync(file)) return false
       const item = JSON.parse(readFileSync(file, 'utf8'))
@@ -189,8 +196,9 @@ export function createSafety({ dataDir, getSettings, windowMs = 60000 } = {}) {
       return true
     },
 
-    /** 拒绝某确认项：只删文件，不记批准。 */
+    /** 拒绝某确认项：只删文件，不记批准。id 越界直接拒绝（不删任何文件）。 */
     rejectConfirm(id) {
+      if (!SAFE_ID.test(String(id || ''))) return false
       const file = join(confirmDir, `${id}.json`)
       if (!existsSync(file)) return false
       unlinkSync(file)

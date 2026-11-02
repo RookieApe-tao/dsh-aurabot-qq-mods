@@ -141,6 +141,26 @@ test('面板 /run（对话测试）→ 共享决策窗（key=decision），不�
   rmSync(rec.dir, { recursive: true, force: true })
 })
 
+test('路由层白名单：/confirm 越界 id 与 /memory 编码绕过都被拒（复审残留 P0-1）', async () => {
+  const { api, rec } = fakeApi()
+  phone.setup(api)
+  // /confirm POST：approve/reject 带越界 id → 报错，且不真删文件
+  for (const id of ['../../victim', '..%2fvictim', '%2e%2e%2fconfig', 'x'.repeat(41)]) {
+    const a = await rec.routes.get('/confirm')({ method: 'POST', url: 'http://x/confirm', __body: { approve: true, id } })
+    assert.equal(a.ok, false, `approve 越界 id ${id} 应被拒`)
+    const r = await rec.routes.get('/confirm')({ method: 'POST', url: 'http://x/confirm', __body: { reject: true, id } })
+    assert.equal(r.ok, false, `reject 越界 id ${id} 应被拒`)
+  }
+  // 合法格式的 id：即使不存在也按原语义返回 ok:true（不泄露存在性），不报错
+  const ok = await rec.routes.get('/confirm')({ method: 'POST', url: 'http://x/confirm', __body: { reject: true, id: '1700000000000-abc123' } })
+  assert.equal(ok.ok, true)
+  // /memory GET：URL 参数 %2e%2e%2f 解码后正是 ../../，SAFE_KEY 必须拦住
+  const m = await rec.routes.get('/memory')({ method: 'GET', url: 'http://x/memory?key=%2e%2e%2fconfig' })
+  assert.equal(m.ok, false, '编码穿越的 key 应被路由层拒绝')
+  assert.ok(/不合法/.test(m.error || ''))
+  rmSync(rec.dir, { recursive: true, force: true })
+})
+
 test('定时器 sweep（cron 流程）→ 共享决策窗（key=decision），不走独立任务窗', async () => {
   const { api, rec } = fakeApi()
   const mod = phone.setup(api)

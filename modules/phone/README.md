@@ -18,7 +18,7 @@
 1. 面板开启模块和总开关；手机开 USB 调试或连上同一台 adb 可见设备（模拟器也行）。想让她自主逛，再开「定时主动逛」并按需调间隔/每日上限。
 2. 主人私聊可以直接说「去逛逛手机」「自己刷会儿手机」（走 `phone_auto_browse`），或点名某个已教流程。
 3. QQ 里对主人可用：
-   - `phone flows` 列流程；`phone flow add <id>` 建流程；`phone flow set <id> prompt <做什么>` 教它做什么；`phone flow set <id> triggers 刷B站,签到` 设触发词；`phone flow set <id> cron "0 9 * * *"` 设定时。
+   - `phone flows` 列流程；`phone flow add <id>` 建流程（**id 只能字母/数字/短横线/下划线，≤40 字**，不支持中文，如 `douyin-signin`；显示名用 `phone flow set <id> name <中文名>` 补）；`phone flow set <id> prompt <做什么>` 教它做什么；`phone flow set <id> triggers 刷B站,签到` 设触发词；`phone flow set <id> cron "0 9 * * *"` 设定时。
    - `phone run <id>` 手动跑；`phone mem <id>` 看记忆；`phone mem clear <id>` 清记忆。
    - `phone status` 看设备/会话/待确认；`phone confirm` 列待批准写操作，`phone confirm 批准 1` 放行。
 3. 聊天里说「刷B站」等触发词即可自动接管执行，跑完汇报结果。

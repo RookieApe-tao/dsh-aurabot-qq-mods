@@ -349,7 +349,7 @@ export default {
             case 'flow': {
               const [sub, id, field, ...val] = rest
               if (sub === 'add') {
-                if (!id) return '用法：phone flow add <id>（流程名用 set name 补）'
+                if (!id) return '用法：phone flow add <id>（流程名用 set name 补；id 只能字母/数字/短横线/下划线，≤40 字，不支持中文）'
                 flows.upsert(id, { name: id, prompt: '', triggers: [], packages: [], enabled: true })
                 return `已建流程 ${id}。接着用 phone flow set ${id} prompt <目标描述> 教它做什么。`
               }
@@ -545,8 +545,16 @@ export default {
       if (req.method === 'GET') return json({ confirms: safety.listConfirms() })
       if (req.method === 'POST') {
         const body = await api.core.http.body(req).catch(() => ({}))
-        if (body.approve && body.id) { safety.approveConfirm(String(body.id)); return json({ ok: true }) }
-        if (body.reject && body.id) { safety.rejectConfirm(String(body.id)); return json({ ok: true }) }
+        // id 白名单再拦一道（复审残留 P0-1）：safety 底层也校验，这里非法直接回错
+        const idOk = (id) => /^[A-Za-z0-9_-]{1,40}$/.test(String(id || ''))
+        if (body.approve && body.id) {
+          if (!idOk(body.id)) return json({ ok: false, error: '不合法的确认项 id' })
+          safety.approveConfirm(String(body.id)); return json({ ok: true })
+        }
+        if (body.reject && body.id) {
+          if (!idOk(body.id)) return json({ ok: false, error: '不合法的确认项 id' })
+          safety.rejectConfirm(String(body.id)); return json({ ok: true })
+        }
         return json({ ok: false, error: '需要 { approve|reject, id }' })
       }
       return json({ ok: false })

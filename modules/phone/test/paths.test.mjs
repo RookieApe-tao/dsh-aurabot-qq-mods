@@ -22,6 +22,8 @@ test('路径穿越封死：memory/guides/flows 的 key 只认白名单字符（P
     const guides = createGuides(dir)
     assert.equal(guides.remove('../../evil'), false, '越目录的指引 key 删不动任何文件')
     assert.throws(() => guides.upsert('../../evil', { name: 'x', text: 'y' }), /指引 key/)
+    assert.equal(guides.get('../../evil'), null, 'get/readCustom 同样不吃越界 key（flow.guide 注入面）')
+    assert.equal(guides.get('%2e%2e%2fconfig'), null)
     // 正常 key 照常工作
     guides.upsert('my-guide', { name: '我的指引', text: '正文' })
     assert.ok(guides.get('my-guide').includes('正文'))

@@ -129,8 +129,11 @@ export const BUILTIN_GUIDES = {
   generic: { name: '通用', packages: [], keywords: [], text: GENERIC_GUIDE },
 }
 
-/** 读自定义覆盖层：dataDir/guides/<key>.md 存在则 text 用它，首行 `<!-- name: xxx -->` 可改名 */
+/** 读自定义覆盖层：dataDir/guides/<key>.md 存在则 text 用它，首行 `<!-- name: xxx -->` 可改名。
+ *  key 白名单（复审残留第 3 条）：get/readCustom 也可能被 flow.guide 等外部值喂进来，
+ *  `../../x` 之类越目录的 key 直接按「没有自定义层」处理。 */
 function readCustom(dataDir, key) {
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(String(key || ''))) return null
   const p = join(dataDir, 'guides', `${key}.md`)
   if (!existsSync(p)) return null
   let text = ''

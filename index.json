@@ -157,7 +157,7 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.7",
+      "version": "1.0.8",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -178,13 +178,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.7",
-      "file": "pet-v1.0.7.zip",
-      "path": "pet-v1.0.7/pet-v1.0.7.zip",
-      "size": 161965,
-      "sha256": "f38236c08e09f34cbcbbda8c1d5b18b4c385d14a2558a1efc49a4e36c8cd8f7a",
-      "commit": "698df25d56bc44d25c2739d69fed22f20fe143d2",
-      "publishedAt": "2026-11-02T04:28:57.143Z"
+      "tag": "pet-v1.0.8",
+      "file": "pet-v1.0.8.zip",
+      "path": "pet-v1.0.8/pet-v1.0.8.zip",
+      "size": 166235,
+      "sha256": "c5ba9cd65ea0b27a4015c5459ea9b064778baca1b0252029b89740ac3cc07996",
+      "commit": "faea03fa0ff6864202839e78014fd80b612aced4",
+      "publishedAt": "2026-11-02T15:19:41.746Z"
     },
     {
       "id": "phone",
@@ -249,8 +249,38 @@
       "sha256": "5bae45ed881f062c932186df4342ebc98c5e6d7fc635d917fd5e00b3334dca63",
       "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
       "publishedAt": "2026-10-31T08:28:54.819Z"
+    },
+    {
+      "id": "tophub",
+      "name": "刷热榜",
+      "version": "0.2.0",
+      "description": "热榜巡游：每天定时逛全网热榜（微博/抖音/知乎/头条等），看完写记忆、挑有意思的私聊分享给主人；对外提供 hot()/search() 热点控件。",
+      "category": "platform",
+      "tags": [
+        "热榜",
+        "资讯",
+        "巡游"
+      ],
+      "author": "Nightc",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "plugin-config"
+      ],
+      "replacesBuiltin": false,
+      "tag": "tophub-v0.2.0",
+      "file": "tophub-v0.2.0.zip",
+      "path": "tophub-v0.2.0/tophub-v0.2.0.zip",
+      "size": 17538,
+      "sha256": "0fd172065411ecd67768370a6883f72032461f3f1d8b88b2c25343213fad2945",
+      "commit": "faea03fa0ff6864202839e78014fd80b612aced4",
+      "publishedAt": "2026-11-02T15:19:41.746Z"
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-02T14:59:05.385Z"
+  "generatedAt": "2026-11-02T15:19:41.746Z"
 }

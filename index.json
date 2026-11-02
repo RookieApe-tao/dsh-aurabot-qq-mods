@@ -96,7 +96,7 @@
     {
       "id": "heybox",
       "name": "刷小黑盒",
-      "version": "1.1.3",
+      "version": "1.3.1",
       "description": "用主人的账号逛小黑盒：看帖子和热评，点赞、评论、发帖。支持谷时逛、扫码登录和浏览器验证。",
       "category": "platform",
       "tags": [
@@ -117,13 +117,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "heybox-v1.1.3",
-      "file": "heybox-v1.1.3.zip",
-      "path": "heybox-v1.1.3/heybox-v1.1.3.zip",
-      "size": 45045,
-      "sha256": "bec79c77713ece7506d5d8a0e35c16b868a74c5485595d5129f522bcba94c267",
-      "commit": "698df25d56bc44d25c2739d69fed22f20fe143d2",
-      "publishedAt": "2026-11-02T04:28:57.143Z"
+      "tag": "heybox-v1.3.1",
+      "file": "heybox-v1.3.1.zip",
+      "path": "heybox-v1.3.1/heybox-v1.3.1.zip",
+      "size": 68279,
+      "sha256": "adf1b7adb93a15535eac005335b125a73bd24d64dbec7aecfa49609f68465430",
+      "commit": "e694528114dcd8a350190f375f9f85cbe9f6e045",
+      "publishedAt": "2026-11-02T14:59:05.385Z"
     },
     {
       "id": "meme-wiki",
@@ -189,7 +189,7 @@
     {
       "id": "phone",
       "name": "手机逛逛",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "通过 ADB 操控 Android 手机：按主人教好的流程自动签到/浏览/点赞，或自由推理完成一句话任务",
       "category": "platform",
       "tags": [
@@ -210,13 +210,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "phone-v0.1.0",
-      "file": "phone-v0.1.0.zip",
-      "path": "phone-v0.1.0/phone-v0.1.0.zip",
-      "size": 72513,
-      "sha256": "b71356a6e1e6da9a9ce98dc1a0c251823aee74cf107289e1667d04e99f51171b",
-      "commit": "698df25d56bc44d25c2739d69fed22f20fe143d2",
-      "publishedAt": "2026-11-02T04:28:57.143Z"
+      "tag": "phone-v0.2.0",
+      "file": "phone-v0.2.0.zip",
+      "path": "phone-v0.2.0/phone-v0.2.0.zip",
+      "size": 78023,
+      "sha256": "7b9242fe1648e3a3b5db70bba3ae989d67c6d32519d9e239eeb98ab200423d35",
+      "commit": "e694528114dcd8a350190f375f9f85cbe9f6e045",
+      "publishedAt": "2026-11-02T14:59:05.385Z"
     },
     {
       "id": "tieba-reader",
@@ -252,5 +252,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-02T04:28:57.143Z"
+  "generatedAt": "2026-11-02T14:59:05.385Z"
 }

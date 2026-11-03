@@ -189,7 +189,7 @@
     {
       "id": "phone",
       "name": "手机逛逛",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "通过 ADB 操控 Android 手机：按主人教好的流程自动签到/浏览/点赞，或自由推理完成一句话任务",
       "category": "platform",
       "tags": [
@@ -210,13 +210,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "phone-v0.2.0",
-      "file": "phone-v0.2.0.zip",
-      "path": "phone-v0.2.0/phone-v0.2.0.zip",
-      "size": 78023,
-      "sha256": "7b9242fe1648e3a3b5db70bba3ae989d67c6d32519d9e239eeb98ab200423d35",
-      "commit": "e694528114dcd8a350190f375f9f85cbe9f6e045",
-      "publishedAt": "2026-11-02T14:59:05.385Z"
+      "tag": "phone-v0.2.1",
+      "file": "phone-v0.2.1.zip",
+      "path": "phone-v0.2.1/phone-v0.2.1.zip",
+      "size": 78025,
+      "sha256": "77a3e48f7d8741ee8a8e2b6e8fcbefc90bbca1c57926c30307cc599173473e29",
+      "commit": "412d5ad04bfd8359a3c04b2981adce53fb0c9a14",
+      "publishedAt": "2026-11-03T05:04:21.334Z"
     },
     {
       "id": "tieba-reader",
@@ -282,5 +282,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-02T15:19:41.746Z"
+  "generatedAt": "2026-11-03T05:04:21.334Z"
 }

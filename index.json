@@ -5,7 +5,7 @@
     {
       "id": "douyin",
       "name": "刷抖音",
-      "version": "2.0.4",
+      "version": "2.1.0",
       "description": "用专用浏览器刷抖音：看推荐、点赞评论，把好玩的视频分享给主人，也能看别人发来的抖音链接。",
       "category": "platform",
       "tags": [
@@ -26,13 +26,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "douyin-v2.0.4",
-      "file": "douyin-v2.0.4.zip",
-      "path": "douyin-v2.0.4/douyin-v2.0.4.zip",
-      "size": 42472,
-      "sha256": "55370e1e967c1e4e38b8ade27de3cd143118c5e605e21f1ec15b2f3077a0bd7d",
-      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
-      "publishedAt": "2026-10-31T08:28:54.819Z"
+      "tag": "douyin-v2.1.0",
+      "file": "douyin-v2.1.0.zip",
+      "path": "douyin-v2.1.0/douyin-v2.1.0.zip",
+      "size": 42797,
+      "sha256": "6fe3762f0b9733ea4421d01f3e54448fb1d67c67a1eef47c68f002b066fe8056",
+      "commit": "58d3e0102532a89b2ce2569fba423b3ec78cbdb6",
+      "publishedAt": "2026-11-03T07:54:27.366Z"
     },
     {
       "id": "dsh-persona",
@@ -157,7 +157,7 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.8",
+      "version": "1.0.10",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -178,13 +178,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.8",
-      "file": "pet-v1.0.8.zip",
-      "path": "pet-v1.0.8/pet-v1.0.8.zip",
-      "size": 166235,
-      "sha256": "c5ba9cd65ea0b27a4015c5459ea9b064778baca1b0252029b89740ac3cc07996",
-      "commit": "faea03fa0ff6864202839e78014fd80b612aced4",
-      "publishedAt": "2026-11-02T15:19:41.746Z"
+      "tag": "pet-v1.0.10",
+      "file": "pet-v1.0.10.zip",
+      "path": "pet-v1.0.10/pet-v1.0.10.zip",
+      "size": 180297,
+      "sha256": "b96318aca33e331467070bc494f447320af6c3cd79a706f8843ba7e4190729ac",
+      "commit": "58d3e0102532a89b2ce2569fba423b3ec78cbdb6",
+      "publishedAt": "2026-11-03T07:54:27.366Z"
     },
     {
       "id": "phone",
@@ -282,5 +282,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-03T05:04:21.334Z"
+  "generatedAt": "2026-11-03T07:54:27.366Z"
 }

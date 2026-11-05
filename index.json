@@ -96,7 +96,7 @@
     {
       "id": "heybox",
       "name": "刷小黑盒",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "description": "用主人的账号逛小黑盒：看帖子和热评，点赞、评论、发帖。支持谷时逛、扫码登录和浏览器验证。",
       "category": "platform",
       "tags": [
@@ -117,13 +117,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "heybox-v1.3.1",
-      "file": "heybox-v1.3.1.zip",
-      "path": "heybox-v1.3.1/heybox-v1.3.1.zip",
-      "size": 68279,
-      "sha256": "adf1b7adb93a15535eac005335b125a73bd24d64dbec7aecfa49609f68465430",
-      "commit": "e694528114dcd8a350190f375f9f85cbe9f6e045",
-      "publishedAt": "2026-11-02T14:59:05.385Z"
+      "tag": "heybox-v1.3.2",
+      "file": "heybox-v1.3.2.zip",
+      "path": "heybox-v1.3.2/heybox-v1.3.2.zip",
+      "size": 72566,
+      "sha256": "348368945d0329e9dc7e8a4aa8c495841a6ab47927311b487773808e8ac717d8",
+      "commit": "3d479a8217fa64458fd68783c948cfe702e15ca6",
+      "publishedAt": "2026-11-05T11:54:03.254Z"
     },
     {
       "id": "meme-wiki",
@@ -153,6 +153,36 @@
       "sha256": "090111eeacc0dcd73502982be7ebb12cddf99623282fbe47b87eeae8a63e3551",
       "commit": "698df25d56bc44d25c2739d69fed22f20fe143d2",
       "publishedAt": "2026-11-02T04:28:57.143Z"
+    },
+    {
+      "id": "mijia",
+      "name": "米家智控",
+      "version": "1.1.0",
+      "description": "米家设备列表与开/关控制：扫码登录免账号密码，私聊说「开客厅灯」或用 /米家 命令，也能让她自己调工具",
+      "category": "tool",
+      "tags": [
+        "米家",
+        "智能家居",
+        "小米"
+      ],
+      "author": "RookieApe-tao",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "mijia-v1.1.0",
+      "file": "mijia-v1.1.0.zip",
+      "path": "mijia-v1.1.0/mijia-v1.1.0.zip",
+      "size": 32726,
+      "sha256": "2bdcb85dbe4d8c719514993bec5b7be0d596cf2cf2816e8383e2ead1b1368220",
+      "commit": "3d479a8217fa64458fd68783c948cfe702e15ca6",
+      "publishedAt": "2026-11-05T11:54:03.254Z"
     },
     {
       "id": "pet",
@@ -282,5 +312,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-03T07:54:27.366Z"
+  "generatedAt": "2026-11-05T11:54:03.254Z"
 }

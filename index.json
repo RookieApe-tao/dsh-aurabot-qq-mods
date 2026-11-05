@@ -5,7 +5,7 @@
     {
       "id": "douyin",
       "name": "刷抖音",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "description": "用专用浏览器刷抖音：看推荐、点赞评论，把好玩的视频分享给主人，也能看别人发来的抖音链接。",
       "category": "platform",
       "tags": [
@@ -26,13 +26,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "douyin-v2.1.0",
-      "file": "douyin-v2.1.0.zip",
-      "path": "douyin-v2.1.0/douyin-v2.1.0.zip",
-      "size": 42797,
-      "sha256": "6fe3762f0b9733ea4421d01f3e54448fb1d67c67a1eef47c68f002b066fe8056",
-      "commit": "58d3e0102532a89b2ce2569fba423b3ec78cbdb6",
-      "publishedAt": "2026-11-03T07:54:27.366Z"
+      "tag": "douyin-v2.2.0",
+      "file": "douyin-v2.2.0.zip",
+      "path": "douyin-v2.2.0/douyin-v2.2.0.zip",
+      "size": 43779,
+      "sha256": "861b4e9571be2b949a17814f83f5d928d8e4bdd7fda3ed7cce9c62b14431baf3",
+      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
+      "publishedAt": "2026-11-05T16:25:13.800Z"
     },
     {
       "id": "dsh-persona",
@@ -96,7 +96,7 @@
     {
       "id": "heybox",
       "name": "刷小黑盒",
-      "version": "1.3.2",
+      "version": "1.4.0",
       "description": "用主人的账号逛小黑盒：看帖子和热评，点赞、评论、发帖。支持谷时逛、扫码登录和浏览器验证。",
       "category": "platform",
       "tags": [
@@ -117,13 +117,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "heybox-v1.3.2",
-      "file": "heybox-v1.3.2.zip",
-      "path": "heybox-v1.3.2/heybox-v1.3.2.zip",
-      "size": 72566,
-      "sha256": "348368945d0329e9dc7e8a4aa8c495841a6ab47927311b487773808e8ac717d8",
-      "commit": "3d479a8217fa64458fd68783c948cfe702e15ca6",
-      "publishedAt": "2026-11-05T11:54:03.254Z"
+      "tag": "heybox-v1.4.0",
+      "file": "heybox-v1.4.0.zip",
+      "path": "heybox-v1.4.0/heybox-v1.4.0.zip",
+      "size": 73054,
+      "sha256": "47162cb4add1da968918210549ebfe5ad48c747019676dc99cfd42ec5e09be51",
+      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
+      "publishedAt": "2026-11-05T16:25:13.800Z"
     },
     {
       "id": "meme-wiki",
@@ -187,7 +187,7 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.10",
+      "version": "1.0.11",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -208,18 +208,18 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.10",
-      "file": "pet-v1.0.10.zip",
-      "path": "pet-v1.0.10/pet-v1.0.10.zip",
-      "size": 180297,
-      "sha256": "b96318aca33e331467070bc494f447320af6c3cd79a706f8843ba7e4190729ac",
-      "commit": "58d3e0102532a89b2ce2569fba423b3ec78cbdb6",
-      "publishedAt": "2026-11-03T07:54:27.366Z"
+      "tag": "pet-v1.0.11",
+      "file": "pet-v1.0.11.zip",
+      "path": "pet-v1.0.11/pet-v1.0.11.zip",
+      "size": 181426,
+      "sha256": "f4d61838c17d0835fc7b3002e26dc4d32e00aeaa9bbe5ba3f242553be3f4b5f0",
+      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
+      "publishedAt": "2026-11-05T16:25:13.800Z"
     },
     {
       "id": "phone",
       "name": "手机逛逛",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "description": "通过 ADB 操控 Android 手机：按主人教好的流程自动签到/浏览/点赞，或自由推理完成一句话任务",
       "category": "platform",
       "tags": [
@@ -240,13 +240,43 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "phone-v0.2.1",
-      "file": "phone-v0.2.1.zip",
-      "path": "phone-v0.2.1/phone-v0.2.1.zip",
-      "size": 78025,
-      "sha256": "77a3e48f7d8741ee8a8e2b6e8fcbefc90bbca1c57926c30307cc599173473e29",
-      "commit": "412d5ad04bfd8359a3c04b2981adce53fb0c9a14",
-      "publishedAt": "2026-11-03T05:04:21.334Z"
+      "tag": "phone-v0.3.0",
+      "file": "phone-v0.3.0.zip",
+      "path": "phone-v0.3.0/phone-v0.3.0.zip",
+      "size": 78713,
+      "sha256": "8b4179a2afab5a7628e4e47387f74f8c5a670cc2ec9ed35e4900e6df0ffa1dba",
+      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
+      "publishedAt": "2026-11-05T16:25:13.800Z"
+    },
+    {
+      "id": "rss-reader",
+      "name": "自主上网",
+      "version": "1.0.0",
+      "description": "定时读 RSS 订阅源，把有意思的条目交给主动发言决策（她自己决定要不要跟主人聊）",
+      "category": "platform",
+      "tags": [
+        "RSS",
+        "订阅",
+        "上网",
+        "阅读"
+      ],
+      "author": "RookieApe-tao",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem"
+      ],
+      "replacesBuiltin": false,
+      "tag": "rss-reader-v1.0.0",
+      "file": "rss-reader-v1.0.0.zip",
+      "path": "rss-reader-v1.0.0/rss-reader-v1.0.0.zip",
+      "size": 17886,
+      "sha256": "ccd91233501937f327f01be6b3b72c7b94647dd48dfa042e63530d60f9980312",
+      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
+      "publishedAt": "2026-11-05T16:25:13.800Z"
     },
     {
       "id": "tieba-reader",
@@ -283,7 +313,7 @@
     {
       "id": "tophub",
       "name": "刷热榜",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "description": "热榜巡游：每天定时逛全网热榜（微博/抖音/知乎/头条等），看完写记忆、挑有意思的私聊分享给主人；对外提供 hot()/search() 热点控件。",
       "category": "platform",
       "tags": [
@@ -302,15 +332,15 @@
         "plugin-config"
       ],
       "replacesBuiltin": false,
-      "tag": "tophub-v0.2.0",
-      "file": "tophub-v0.2.0.zip",
-      "path": "tophub-v0.2.0/tophub-v0.2.0.zip",
-      "size": 17538,
-      "sha256": "0fd172065411ecd67768370a6883f72032461f3f1d8b88b2c25343213fad2945",
-      "commit": "faea03fa0ff6864202839e78014fd80b612aced4",
-      "publishedAt": "2026-11-02T15:19:41.746Z"
+      "tag": "tophub-v0.3.0",
+      "file": "tophub-v0.3.0.zip",
+      "path": "tophub-v0.3.0/tophub-v0.3.0.zip",
+      "size": 18658,
+      "sha256": "fc9c365ae26e01edd8ba5e3731f2ca0b92cd938e3066ff5957c0b35202590733",
+      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
+      "publishedAt": "2026-11-05T16:25:13.800Z"
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-05T11:54:03.254Z"
+  "generatedAt": "2026-11-05T16:25:13.800Z"
 }

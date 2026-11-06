@@ -5,7 +5,7 @@
     {
       "id": "browser-ops",
       "name": "逛网页（浏览器自动化）",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "封装 CDP 专用浏览器（独立登录资料）：提供打开网页、点击、输入、滚动、截屏、页面快照等原子操作，供其他模块经 api.use('browser-ops') 复用。",
       "category": "platform",
       "tags": [
@@ -13,7 +13,7 @@
         "自动化",
         "CDP"
       ],
-      "author": "Aurabot",
+      "author": "RookieApe-tao",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -25,25 +25,25 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "browser-ops-v1.1.0",
-      "file": "browser-ops-v1.1.0.zip",
-      "path": "browser-ops-v1.1.0/browser-ops-v1.1.0.zip",
-      "size": 36431,
-      "sha256": "43e94c6e0cc2f8d71ee62135275238b7783dcffe6c3f6081b075dde107e6bfc3",
-      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
-      "publishedAt": "2026-11-06T04:07:22.412Z"
+      "tag": "browser-ops-v1.1.1",
+      "file": "browser-ops-v1.1.1.zip",
+      "path": "browser-ops-v1.1.1/browser-ops-v1.1.1.zip",
+      "size": 36437,
+      "sha256": "2125d6c93202dc77631475f48df95d00bed6640a6543d39bab55a532a8ca4fa8",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "douyin",
       "name": "刷抖音",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "description": "用专用浏览器刷抖音：看推荐、点赞评论，把好玩的视频分享给主人，也能看别人发来的抖音链接。",
       "category": "platform",
       "tags": [
         "抖音",
         "短视频"
       ],
-      "author": "Aurabot",
+      "author": "accomplish07zrh-eng",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -57,13 +57,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "douyin-v2.2.0",
-      "file": "douyin-v2.2.0.zip",
-      "path": "douyin-v2.2.0/douyin-v2.2.0.zip",
-      "size": 43779,
-      "sha256": "861b4e9571be2b949a17814f83f5d928d8e4bdd7fda3ed7cce9c62b14431baf3",
-      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
-      "publishedAt": "2026-11-05T16:25:13.800Z"
+      "tag": "douyin-v2.2.1",
+      "file": "douyin-v2.2.1.zip",
+      "path": "douyin-v2.2.1/douyin-v2.2.1.zip",
+      "size": 43784,
+      "sha256": "a131f6673e8578139e2fdd6ab2f900cd4dce98e19354b5a9df927cb917ff2a73",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "dsh-persona",
@@ -99,13 +99,13 @@
     {
       "id": "group-admin",
       "name": "群管",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "主人开口时帮忙管群：禁言、解禁、踢人、改头衔、发公告。她也知道自己在群里有没有管理权限。",
       "category": "manage",
       "tags": [
         "群管"
       ],
-      "author": "Aurabot",
+      "author": "accomplish07zrh-eng",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -116,25 +116,25 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "group-admin-v1.0.2",
-      "file": "group-admin-v1.0.2.zip",
-      "path": "group-admin-v1.0.2/group-admin-v1.0.2.zip",
+      "tag": "group-admin-v1.0.3",
+      "file": "group-admin-v1.0.3.zip",
+      "path": "group-admin-v1.0.3/group-admin-v1.0.3.zip",
       "size": 4003,
-      "sha256": "2b66c5826ee257963a9681f4d3c8c46afee6d61425d4255d3f0062030aa14c81",
-      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
-      "publishedAt": "2026-10-31T08:28:54.819Z"
+      "sha256": "90a5c7df53ab38f21ae49a6c3bde6933c7f173c4fe58fcfdfeda0425d624b22f",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "heybox",
       "name": "刷小黑盒",
-      "version": "1.4.0",
+      "version": "1.4.2",
       "description": "用主人的账号逛小黑盒：看帖子和热评，点赞、评论、发帖。支持谷时逛、扫码登录和浏览器验证。",
       "category": "platform",
       "tags": [
         "小黑盒",
         "游戏"
       ],
-      "author": "Aurabot",
+      "author": "accomplish07zrh-eng",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -148,18 +148,18 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "heybox-v1.4.0",
-      "file": "heybox-v1.4.0.zip",
-      "path": "heybox-v1.4.0/heybox-v1.4.0.zip",
-      "size": 73054,
-      "sha256": "47162cb4add1da968918210549ebfe5ad48c747019676dc99cfd42ec5e09be51",
-      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
-      "publishedAt": "2026-11-05T16:25:13.800Z"
+      "tag": "heybox-v1.4.2",
+      "file": "heybox-v1.4.2.zip",
+      "path": "heybox-v1.4.2/heybox-v1.4.2.zip",
+      "size": 73058,
+      "sha256": "25056860180b8b051d49458294bfef2dacbd20e19822ac20ba5c38f524c51e50",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "history-vault",
       "name": "跨会话记忆",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "description": "三层存储跨 DSH 会话保留聊天细节：原文层 / 日摘要层 / 月印象层，按 skills 方式分层读取，避免会话归档后细节丢失和重复压缩上下文",
       "category": "manage",
       "tags": [
@@ -167,7 +167,7 @@
         "历史",
         "上下文"
       ],
-      "author": "Nightc",
+      "author": "RookieApe-tao",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -176,18 +176,18 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "history-vault-v0.1.0",
-      "file": "history-vault-v0.1.0.zip",
-      "path": "history-vault-v0.1.0/history-vault-v0.1.0.zip",
-      "size": 16858,
-      "sha256": "c89ad7441ba23e6f7737275650e9f96f145fb003e71d5dc2b6a8c6b690d62813",
-      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
-      "publishedAt": "2026-11-06T04:07:22.412Z"
+      "tag": "history-vault-v0.1.1",
+      "file": "history-vault-v0.1.1.zip",
+      "path": "history-vault-v0.1.1/history-vault-v0.1.1.zip",
+      "size": 16866,
+      "sha256": "289474e0abf51581dd2f6bb87c0f7a18b69fc5478ded60f653d05a48674db311",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "meme-wiki",
       "name": "梗百科",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "description": "本地梗库：聊天里命中就把词条塞进上下文；词条从梗站按需导入，不随模块分发。",
       "category": "social",
       "tags": [
@@ -195,7 +195,7 @@
         "词典",
         "聊天"
       ],
-      "author": "Nightc",
+      "author": "Nightc-c",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -205,13 +205,13 @@
         "filesystem"
       ],
       "replacesBuiltin": false,
-      "tag": "meme-wiki-v0.2.5",
-      "file": "meme-wiki-v0.2.5.zip",
-      "path": "meme-wiki-v0.2.5/meme-wiki-v0.2.5.zip",
-      "size": 31626,
-      "sha256": "090111eeacc0dcd73502982be7ebb12cddf99623282fbe47b87eeae8a63e3551",
-      "commit": "698df25d56bc44d25c2739d69fed22f20fe143d2",
-      "publishedAt": "2026-11-02T04:28:57.143Z"
+      "tag": "meme-wiki-v0.2.6",
+      "file": "meme-wiki-v0.2.6.zip",
+      "path": "meme-wiki-v0.2.6/meme-wiki-v0.2.6.zip",
+      "size": 31628,
+      "sha256": "90fe695e276309235acba783d0da44bef356948301c9480034b7c34b473967f2",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "mijia",
@@ -246,13 +246,13 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.12",
+      "version": "1.0.13",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
         "桌宠"
       ],
-      "author": "Aurabot",
+      "author": "RookieApe-tao",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -267,18 +267,18 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.12",
-      "file": "pet-v1.0.12.zip",
-      "path": "pet-v1.0.12/pet-v1.0.12.zip",
-      "size": 206780,
-      "sha256": "d22ac06b7c66c04003b81941e2c5c4739a24f88324892d447caeb993b5ec85f5",
-      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
-      "publishedAt": "2026-11-06T04:07:22.412Z"
+      "tag": "pet-v1.0.13",
+      "file": "pet-v1.0.13.zip",
+      "path": "pet-v1.0.13/pet-v1.0.13.zip",
+      "size": 206788,
+      "sha256": "b9e397c9647d728f8e054d23ca0b1e3810fa942905f2653f2f7f8410faab9773",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "phone",
       "name": "手机逛逛",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "description": "通过 ADB 操控 Android 手机：按主人教好的流程自动签到/浏览/点赞，或自由推理完成一句话任务",
       "category": "platform",
       "tags": [
@@ -286,7 +286,7 @@
         "手机",
         "自动化"
       ],
-      "author": "Aurabot",
+      "author": "RookieApe-tao",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -299,13 +299,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "phone-v0.3.0",
-      "file": "phone-v0.3.0.zip",
-      "path": "phone-v0.3.0/phone-v0.3.0.zip",
-      "size": 78713,
-      "sha256": "8b4179a2afab5a7628e4e47387f74f8c5a670cc2ec9ed35e4900e6df0ffa1dba",
-      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
-      "publishedAt": "2026-11-05T16:25:13.800Z"
+      "tag": "phone-v0.3.1",
+      "file": "phone-v0.3.1.zip",
+      "path": "phone-v0.3.1/phone-v0.3.1.zip",
+      "size": 78718,
+      "sha256": "9ec530ad6b1dd25f713c817aff0a2e65c20811afdfbb8387b6aef47ce19c019a",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "rss-reader",
@@ -340,14 +340,14 @@
     {
       "id": "tieba-reader",
       "name": "逛贴吧（只读）",
-      "version": "1.5.0",
+      "version": "1.5.2",
       "description": "只读搜索和浏览贴吧，也可按兴趣向主人私聊分享。",
       "category": "platform",
       "tags": [
         "贴吧",
         "只读"
       ],
-      "author": "GitNekopedia",
+      "author": "accomplish07zrh-eng",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -361,18 +361,18 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "tieba-reader-v1.5.0",
-      "file": "tieba-reader-v1.5.0.zip",
-      "path": "tieba-reader-v1.5.0/tieba-reader-v1.5.0.zip",
-      "size": 125972,
-      "sha256": "5bae45ed881f062c932186df4342ebc98c5e6d7fc635d917fd5e00b3334dca63",
-      "commit": "8ac24dd88579305089c266852d90a2558a6fc02d",
-      "publishedAt": "2026-10-31T08:28:54.819Z"
+      "tag": "tieba-reader-v1.5.2",
+      "file": "tieba-reader-v1.5.2.zip",
+      "path": "tieba-reader-v1.5.2/tieba-reader-v1.5.2.zip",
+      "size": 125979,
+      "sha256": "59d43e3fe5a3ab5c47b424f7eacb9eb9a55c3c7f506cd132f42e56e5199b81ff",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "tophub",
       "name": "刷热榜",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "description": "热榜巡游：每天定时逛全网热榜（微博/抖音/知乎/头条等），看完写记忆、挑有意思的私聊分享给主人；对外提供 hot()/search() 热点控件。",
       "category": "platform",
       "tags": [
@@ -380,7 +380,7 @@
         "资讯",
         "巡游"
       ],
-      "author": "Nightc",
+      "author": "RookieApe-tao",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -391,19 +391,19 @@
         "plugin-config"
       ],
       "replacesBuiltin": false,
-      "tag": "tophub-v0.3.0",
-      "file": "tophub-v0.3.0.zip",
-      "path": "tophub-v0.3.0/tophub-v0.3.0.zip",
-      "size": 18658,
-      "sha256": "fc9c365ae26e01edd8ba5e3731f2ca0b92cd938e3066ff5957c0b35202590733",
-      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
-      "publishedAt": "2026-11-05T16:25:13.800Z"
+      "tag": "tophub-v0.3.1",
+      "file": "tophub-v0.3.1.zip",
+      "path": "tophub-v0.3.1/tophub-v0.3.1.zip",
+      "size": 18663,
+      "sha256": "7fe4ccb2a46b6f98ee1e1d9183559c0424d0b4e91ebfedfff3d2e3a4a735e3a2",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     },
     {
       "id": "windows-ops",
       "name": "逛电脑（Windows 自动化）",
-      "version": "1.1.0",
-      "description": "经 PowerShell 操作这台电脑：窗口枚举/激活/关闭、截屏、剪贴板读写、键鼠模拟。默认仅主人可用，带操作白名单与危险操作确认门槛。",
+      "version": "1.2.0",
+      "description": "经 PowerShell 操作这台电脑：读无障碍树（UIA）按元素点击/写值/读文本/触发表单，窗口枚举/激活/关闭、截屏、剪贴板读写、键鼠模拟。默认仅主人可用，带操作白名单与危险操作确认门槛。",
       "category": "platform",
       "tags": [
         "windows",
@@ -411,7 +411,7 @@
         "键鼠",
         "截屏"
       ],
-      "author": "Aurabot",
+      "author": "RookieApe-tao",
       "license": "MIT",
       "api": 1,
       "minPluginVersion": "1.2.0",
@@ -422,15 +422,15 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "windows-ops-v1.1.0",
-      "file": "windows-ops-v1.1.0.zip",
-      "path": "windows-ops-v1.1.0/windows-ops-v1.1.0.zip",
-      "size": 34773,
-      "sha256": "860e2a6b8a5a9c71a8403cd016a195e2c87494906e0e27532ae813fe62d148c5",
-      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
-      "publishedAt": "2026-11-06T04:07:22.412Z"
+      "tag": "windows-ops-v1.2.0",
+      "file": "windows-ops-v1.2.0.zip",
+      "path": "windows-ops-v1.2.0/windows-ops-v1.2.0.zip",
+      "size": 51178,
+      "sha256": "fe73a3254ebf5c80fe2751939c8c332ed061e9340ad766cf68c370dd3b501911",
+      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
+      "publishedAt": "2026-11-06T13:02:22.637Z"
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-06T04:07:22.412Z"
+  "generatedAt": "2026-11-06T13:02:22.637Z"
 }

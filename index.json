@@ -429,8 +429,40 @@
       "sha256": "fe73a3254ebf5c80fe2751939c8c332ed061e9340ad766cf68c370dd3b501911",
       "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
       "publishedAt": "2026-11-06T13:02:22.637Z"
+    },
+    {
+      "id": "xhs",
+      "name": "刷小红书",
+      "version": "0.2.0",
+      "description": "用专用浏览器刷小红书：逛推荐/搜索、看笔记写记忆、点赞收藏评论（人格生成、每日上限）、认别人发来的小红书链接、看主人的私信并回复；发帖走「草稿 → 主人确认」两步，绝不闷头发。各能力独立开关，默认全关。",
+      "category": "platform",
+      "tags": [
+        "小红书",
+        "笔记",
+        "种草"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "xhs-v0.2.0",
+      "file": "xhs-v0.2.0.zip",
+      "path": "xhs-v0.2.0/xhs-v0.2.0.zip",
+      "size": 91597,
+      "sha256": "8f986373073b1b368ef7831797d74acc50852e937c7d0d61ee192880bfcb6d91",
+      "commit": "cea72e9d43542681209bb636363e84ad851c1525",
+      "publishedAt": "2026-11-06T15:27:44.569Z"
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-06T13:02:22.637Z"
+  "generatedAt": "2026-11-06T15:27:44.569Z"
 }

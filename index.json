@@ -159,7 +159,7 @@
     {
       "id": "history-vault",
       "name": "跨会话记忆",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "三层存储跨 DSH 会话保留聊天细节：原文层 / 日摘要层 / 月印象层，按 skills 方式分层读取，避免会话归档后细节丢失和重复压缩上下文",
       "category": "manage",
       "tags": [
@@ -176,13 +176,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "history-vault-v0.1.1",
-      "file": "history-vault-v0.1.1.zip",
-      "path": "history-vault-v0.1.1/history-vault-v0.1.1.zip",
-      "size": 16866,
-      "sha256": "289474e0abf51581dd2f6bb87c0f7a18b69fc5478ded60f653d05a48674db311",
-      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
-      "publishedAt": "2026-11-06T13:02:22.637Z"
+      "tag": "history-vault-v0.1.2",
+      "file": "history-vault-v0.1.2.zip",
+      "path": "history-vault-v0.1.2/history-vault-v0.1.2.zip",
+      "size": 20191,
+      "sha256": "698d02b6b30b796ce18250eb448371628e8195067e372af967a36aeb3958dbd4",
+      "commit": "4881a97eddf89269479622e0b38b7957f7205f0a",
+      "publishedAt": "2026-11-06T16:53:07.632Z"
     },
     {
       "id": "meme-wiki",
@@ -464,5 +464,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-06T15:27:44.569Z"
+  "generatedAt": "2026-11-06T16:53:07.632Z"
 }

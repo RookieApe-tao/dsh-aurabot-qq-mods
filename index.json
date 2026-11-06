@@ -3,6 +3,37 @@
   "assetsBase": "https://github.com/RookieApe-tao/dsh-aurabot-qq-mods/releases/download/",
   "modules": [
     {
+      "id": "browser-ops",
+      "name": "逛网页（浏览器自动化）",
+      "version": "1.1.0",
+      "description": "封装 CDP 专用浏览器（独立登录资料）：提供打开网页、点击、输入、滚动、截屏、页面快照等原子操作，供其他模块经 api.use('browser-ops') 复用。",
+      "category": "platform",
+      "tags": [
+        "浏览器",
+        "自动化",
+        "CDP"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "browser-ops-v1.1.0",
+      "file": "browser-ops-v1.1.0.zip",
+      "path": "browser-ops-v1.1.0/browser-ops-v1.1.0.zip",
+      "size": 36431,
+      "sha256": "43e94c6e0cc2f8d71ee62135275238b7783dcffe6c3f6081b075dde107e6bfc3",
+      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
+      "publishedAt": "2026-11-06T04:07:22.412Z"
+    },
+    {
       "id": "douyin",
       "name": "刷抖音",
       "version": "2.2.0",
@@ -126,6 +157,34 @@
       "publishedAt": "2026-11-05T16:25:13.800Z"
     },
     {
+      "id": "history-vault",
+      "name": "跨会话记忆",
+      "version": "0.1.0",
+      "description": "三层存储跨 DSH 会话保留聊天细节：原文层 / 日摘要层 / 月印象层，按 skills 方式分层读取，避免会话归档后细节丢失和重复压缩上下文",
+      "category": "manage",
+      "tags": [
+        "记忆",
+        "历史",
+        "上下文"
+      ],
+      "author": "Nightc",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "history-vault-v0.1.0",
+      "file": "history-vault-v0.1.0.zip",
+      "path": "history-vault-v0.1.0/history-vault-v0.1.0.zip",
+      "size": 16858,
+      "sha256": "c89ad7441ba23e6f7737275650e9f96f145fb003e71d5dc2b6a8c6b690d62813",
+      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
+      "publishedAt": "2026-11-06T04:07:22.412Z"
+    },
+    {
       "id": "meme-wiki",
       "name": "梗百科",
       "version": "0.2.5",
@@ -187,7 +246,7 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.11",
+      "version": "1.0.12",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -208,13 +267,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.11",
-      "file": "pet-v1.0.11.zip",
-      "path": "pet-v1.0.11/pet-v1.0.11.zip",
-      "size": 181426,
-      "sha256": "f4d61838c17d0835fc7b3002e26dc4d32e00aeaa9bbe5ba3f242553be3f4b5f0",
-      "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
-      "publishedAt": "2026-11-05T16:25:13.800Z"
+      "tag": "pet-v1.0.12",
+      "file": "pet-v1.0.12.zip",
+      "path": "pet-v1.0.12/pet-v1.0.12.zip",
+      "size": 206780,
+      "sha256": "d22ac06b7c66c04003b81941e2c5c4739a24f88324892d447caeb993b5ec85f5",
+      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
+      "publishedAt": "2026-11-06T04:07:22.412Z"
     },
     {
       "id": "phone",
@@ -339,8 +398,39 @@
       "sha256": "fc9c365ae26e01edd8ba5e3731f2ca0b92cd938e3066ff5957c0b35202590733",
       "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
       "publishedAt": "2026-11-05T16:25:13.800Z"
+    },
+    {
+      "id": "windows-ops",
+      "name": "逛电脑（Windows 自动化）",
+      "version": "1.1.0",
+      "description": "经 PowerShell 操作这台电脑：窗口枚举/激活/关闭、截屏、剪贴板读写、键鼠模拟。默认仅主人可用，带操作白名单与危险操作确认门槛。",
+      "category": "platform",
+      "tags": [
+        "windows",
+        "自动化",
+        "键鼠",
+        "截屏"
+      ],
+      "author": "Aurabot",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "filesystem",
+        "process",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "windows-ops-v1.1.0",
+      "file": "windows-ops-v1.1.0.zip",
+      "path": "windows-ops-v1.1.0/windows-ops-v1.1.0.zip",
+      "size": 34773,
+      "sha256": "860e2a6b8a5a9c71a8403cd016a195e2c87494906e0e27532ae813fe62d148c5",
+      "commit": "335d80489ec7f1a67d692dd06693c8a259988c70",
+      "publishedAt": "2026-11-06T04:07:22.412Z"
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-05T16:25:13.800Z"
+  "generatedAt": "2026-11-06T04:07:22.412Z"
 }

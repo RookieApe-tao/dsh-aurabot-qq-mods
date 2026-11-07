@@ -215,10 +215,10 @@
     },
     {
       "id": "mijia",
-      "name": "米家智控",
-      "version": "1.1.1",
+      "name": "逛米家（米家智控）",
+      "version": "1.1.2",
       "description": "米家设备列表与开/关控制：扫码登录免账号密码，私聊说「开客厅灯」或用 /米家 命令，也能让她自己调工具",
-      "category": "tool",
+      "category": "platform",
       "tags": [
         "米家",
         "智能家居",
@@ -235,13 +235,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "mijia-v1.1.1",
-      "file": "mijia-v1.1.1.zip",
-      "path": "mijia-v1.1.1/mijia-v1.1.1.zip",
-      "size": 35196,
-      "sha256": "a69e9709196ad8a26c98c6fedc12dce4d2d59dfc9eb2851cebff3e2f6908499b",
-      "commit": "a8d6f8dc4b8798075b7223fba221a7ffa6a13ace",
-      "publishedAt": "2026-11-07T06:02:09.577Z"
+      "tag": "mijia-v1.1.2",
+      "file": "mijia-v1.1.2.zip",
+      "path": "mijia-v1.1.2/mijia-v1.1.2.zip",
+      "size": 35221,
+      "sha256": "14aeb11f64716eb1eb5eec573384667b615f91e16333f287390b764ca16dc982",
+      "commit": "240238cbf63ee9f048c991819ab15cf1d0773c62",
+      "publishedAt": "2026-11-07T12:21:49.919Z"
     },
     {
       "id": "pet",
@@ -464,5 +464,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-07T06:02:09.577Z"
+  "generatedAt": "2026-11-07T12:21:49.919Z"
 }

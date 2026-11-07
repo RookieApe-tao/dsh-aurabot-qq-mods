@@ -216,7 +216,7 @@
     {
       "id": "mijia",
       "name": "米家智控",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "米家设备列表与开/关控制：扫码登录免账号密码，私聊说「开客厅灯」或用 /米家 命令，也能让她自己调工具",
       "category": "tool",
       "tags": [
@@ -235,18 +235,18 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "mijia-v1.1.0",
-      "file": "mijia-v1.1.0.zip",
-      "path": "mijia-v1.1.0/mijia-v1.1.0.zip",
-      "size": 32726,
-      "sha256": "2bdcb85dbe4d8c719514993bec5b7be0d596cf2cf2816e8383e2ead1b1368220",
-      "commit": "3d479a8217fa64458fd68783c948cfe702e15ca6",
-      "publishedAt": "2026-11-05T11:54:03.254Z"
+      "tag": "mijia-v1.1.1",
+      "file": "mijia-v1.1.1.zip",
+      "path": "mijia-v1.1.1/mijia-v1.1.1.zip",
+      "size": 35196,
+      "sha256": "a69e9709196ad8a26c98c6fedc12dce4d2d59dfc9eb2851cebff3e2f6908499b",
+      "commit": "a8d6f8dc4b8798075b7223fba221a7ffa6a13ace",
+      "publishedAt": "2026-11-07T06:02:09.577Z"
     },
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.13",
+      "version": "1.0.14",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -267,13 +267,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.13",
-      "file": "pet-v1.0.13.zip",
-      "path": "pet-v1.0.13/pet-v1.0.13.zip",
-      "size": 206788,
-      "sha256": "b9e397c9647d728f8e054d23ca0b1e3810fa942905f2653f2f7f8410faab9773",
-      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
-      "publishedAt": "2026-11-06T13:02:22.637Z"
+      "tag": "pet-v1.0.14",
+      "file": "pet-v1.0.14.zip",
+      "path": "pet-v1.0.14/pet-v1.0.14.zip",
+      "size": 210757,
+      "sha256": "16f13b04a21d995f6fa21ac168773cdab3c3761b16544e0aeb2cbad4b44b5a70",
+      "commit": "a8d6f8dc4b8798075b7223fba221a7ffa6a13ace",
+      "publishedAt": "2026-11-07T06:02:09.577Z"
     },
     {
       "id": "phone",
@@ -464,5 +464,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-06T17:22:07.609Z"
+  "generatedAt": "2026-11-07T06:02:09.577Z"
 }

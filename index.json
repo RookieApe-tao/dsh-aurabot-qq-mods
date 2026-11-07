@@ -465,7 +465,7 @@
     {
       "id": "windows-ops",
       "name": "逛电脑（Windows 自动化）",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "经 PowerShell 操作这台电脑：读无障碍树（UIA）按元素点击/写值/读文本/触发表单，窗口枚举/激活/关闭、截屏、剪贴板读写、键鼠模拟。默认仅主人可用，带操作白名单与危险操作确认门槛。",
       "category": "platform",
       "tags": [
@@ -485,13 +485,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "windows-ops-v1.2.0",
-      "file": "windows-ops-v1.2.0.zip",
-      "path": "windows-ops-v1.2.0/windows-ops-v1.2.0.zip",
-      "size": 51178,
-      "sha256": "fe73a3254ebf5c80fe2751939c8c332ed061e9340ad766cf68c370dd3b501911",
-      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
-      "publishedAt": "2026-11-06T13:02:22.637Z"
+      "tag": "windows-ops-v1.2.1",
+      "file": "windows-ops-v1.2.1.zip",
+      "path": "windows-ops-v1.2.1/windows-ops-v1.2.1.zip",
+      "size": 51184,
+      "sha256": "5f7a51fbfb5781a1bd343901e710ae4db937e628e88969a9853956fbea867c94",
+      "commit": "7e9ed5dd9212e6b6e2027622a3567cf155ce6abf",
+      "publishedAt": "2026-11-07T15:01:42.725Z"
     },
     {
       "id": "xhs",
@@ -527,5 +527,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-07T14:31:43.465Z"
+  "generatedAt": "2026-11-07T15:01:42.725Z"
 }

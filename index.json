@@ -375,7 +375,7 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.15",
+      "version": "1.0.16",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -396,13 +396,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.15",
-      "file": "pet-v1.0.15.zip",
-      "path": "pet-v1.0.15/pet-v1.0.15.zip",
-      "size": 223147,
-      "sha256": "fe215701e4b5b9ac541093700aed8982ea902af0c5c20ee191889c407ff4f521",
-      "commit": "0fa2750ddade64ad32b5a43696a0f8950afb865d",
-      "publishedAt": "2026-11-08T15:38:11.593Z"
+      "tag": "pet-v1.0.16",
+      "file": "pet-v1.0.16.zip",
+      "path": "pet-v1.0.16/pet-v1.0.16.zip",
+      "size": 223118,
+      "sha256": "d3f9cf77df2459f1d2fe15bd81fa79f03d47b4e75ed4e2f41ce4885d120d9f2d",
+      "commit": "7458e01a9310b8ed203879de3e93760b5c4564d5",
+      "publishedAt": "2026-11-09T02:01:33.452Z"
     },
     {
       "id": "phone",
@@ -501,7 +501,7 @@
     {
       "id": "room3d",
       "name": "房间",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "给她一个自己的 3D 房间：屋里一开始是空的，只有她一个人（大肥鱼）；家具、地板、猫都能自己摆，她还看得见自己在哪儿。",
       "category": "social",
       "tags": [
@@ -522,13 +522,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "room3d-v1.0.0",
-      "file": "room3d-v1.0.0.zip",
-      "path": "room3d-v1.0.0/room3d-v1.0.0.zip",
-      "size": 331004,
-      "sha256": "471797af687426269d135c4806013340ef0eb7d3237fe705d9523a098cf6e293",
-      "commit": "0fa2750ddade64ad32b5a43696a0f8950afb865d",
-      "publishedAt": "2026-11-08T15:38:11.593Z"
+      "tag": "room3d-v1.0.1",
+      "file": "room3d-v1.0.1.zip",
+      "path": "room3d-v1.0.1/room3d-v1.0.1.zip",
+      "size": 330523,
+      "sha256": "df03c9f17211f3b131e70c3d346f9c4dcc50f76c3f96a595623f054a9c94a503",
+      "commit": "7458e01a9310b8ed203879de3e93760b5c4564d5",
+      "publishedAt": "2026-11-09T02:01:33.452Z"
     },
     {
       "id": "rss-reader",
@@ -687,5 +687,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-09T01:32:50.993Z"
+  "generatedAt": "2026-11-09T02:01:33.452Z"
 }

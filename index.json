@@ -3,6 +3,38 @@
   "assetsBase": "https://github.com/RookieApe-tao/dsh-aurabot-qq-mods/releases/download/",
   "modules": [
     {
+      "id": "aura-mimo",
+      "name": "aura-mimo",
+      "version": "1.0.0",
+      "description": "用一段参考音频零训练克隆音色，接入小米 MiMo TTS，让她用自己的声音说话。",
+      "category": "creative",
+      "tags": [
+        "语音",
+        "TTS",
+        "音色克隆",
+        "MiMo"
+      ],
+      "author": "zcx1021",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "aura-mimo-v1.0.0",
+      "file": "aura-mimo-v1.0.0.zip",
+      "path": "aura-mimo-v1.0.0/aura-mimo-v1.0.0.zip",
+      "size": 23294,
+      "sha256": "c607e4848d482a52930b15949f5aa962c6d5285cdd74405060d899aa0081f4b9",
+      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
+      "publishedAt": "2026-11-09T10:08:31.245Z"
+    },
+    {
       "id": "beg-for-money",
       "name": "讨饭",
       "version": "1.0.1",
@@ -283,6 +315,40 @@
       "publishedAt": "2026-11-06T17:22:07.609Z"
     },
     {
+      "id": "kanzhibo",
+      "name": "抖音看直播",
+      "version": "1.0.0",
+      "description": "用独立浏览器（Edge/Chrome）经 CDP 挂在抖音直播间：进房、发一条定制评论、续粉丝团灯牌、主人在 QQ 私聊里命令发弹幕、开播主动提醒；点之前先验面板，点后按 +100 / 聊天播报 / 进度三级确认。",
+      "category": "platform",
+      "tags": [
+        "抖音",
+        "直播",
+        "挂机",
+        "灯牌",
+        "CDP"
+      ],
+      "author": "h752603-source",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "kanzhibo-v1.0.0",
+      "file": "kanzhibo-v1.0.0.zip",
+      "path": "kanzhibo-v1.0.0/kanzhibo-v1.0.0.zip",
+      "size": 106069,
+      "sha256": "a6e25814e726cf07142bb44200bd0fd8749971514f063ea9a3ea1129d640ca83",
+      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
+      "publishedAt": "2026-11-09T10:08:31.245Z"
+    },
+    {
       "id": "meme-wiki",
       "name": "梗百科",
       "version": "0.2.6",
@@ -371,6 +437,39 @@
       "sha256": "2adc8b04aac2c01e18b5b91a237202a1de0d162a5f19592a249b4c155fa1a6f9",
       "commit": "3880b8766bfc4dba643a05b7d81a03a9c22afd43",
       "publishedAt": "2026-11-07T14:31:43.465Z"
+    },
+    {
+      "id": "news",
+      "name": "每日新闻一图流",
+      "version": "1.0.0",
+      "description": "每天从公开 RSS 源挑国内近期新闻，调用生图绘制中文一图流，附带来源链接发到指定聊天。",
+      "category": "creative",
+      "tags": [
+        "新闻",
+        "一图流",
+        "生图",
+        "每日简报"
+      ],
+      "author": "HTwoOhwater",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [
+        "imagegen"
+      ],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "plugin-config"
+      ],
+      "replacesBuiltin": false,
+      "tag": "news-v1.0.0",
+      "file": "news-v1.0.0.zip",
+      "path": "news-v1.0.0/news-v1.0.0.zip",
+      "size": 15105,
+      "sha256": "d7b223660c8e5d8c058ead08baea58045708d8804ad6f1f77c4773a4696efbb7",
+      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
+      "publishedAt": "2026-11-09T10:08:31.245Z"
     },
     {
       "id": "pet",
@@ -501,7 +600,7 @@
     {
       "id": "room3d",
       "name": "房间",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "给她一个自己的 3D 房间：屋里一开始是空的，只有她一个人（大肥鱼）；家具、地板、猫都能自己摆，她还看得见自己在哪儿。",
       "category": "social",
       "tags": [
@@ -522,13 +621,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "room3d-v1.0.1",
-      "file": "room3d-v1.0.1.zip",
-      "path": "room3d-v1.0.1/room3d-v1.0.1.zip",
-      "size": 330523,
-      "sha256": "df03c9f17211f3b131e70c3d346f9c4dcc50f76c3f96a595623f054a9c94a503",
-      "commit": "7458e01a9310b8ed203879de3e93760b5c4564d5",
-      "publishedAt": "2026-11-09T02:01:33.452Z"
+      "tag": "room3d-v1.0.2",
+      "file": "room3d-v1.0.2.zip",
+      "path": "room3d-v1.0.2/room3d-v1.0.2.zip",
+      "size": 330524,
+      "sha256": "77309e0619d6a89a48f5cb36a034efbe43a780c553727b5bd04caa27b6d16725",
+      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
+      "publishedAt": "2026-11-09T10:08:31.245Z"
     },
     {
       "id": "rss-reader",
@@ -591,6 +690,38 @@
       "sha256": "59d43e3fe5a3ab5c47b424f7eacb9eb9a55c3c7f506cd132f42e56e5199b81ff",
       "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
       "publishedAt": "2026-11-06T13:02:22.637Z"
+    },
+    {
+      "id": "token-budget",
+      "name": "预算管家",
+      "version": "1.2.0",
+      "description": "省 token：注入内容预算封顶、本地向量只带最相关的 16 条记忆、估算记账、日超预算自动熔断",
+      "category": "manage",
+      "tags": [
+        "省token",
+        "预算",
+        "熔断",
+        "记忆"
+      ],
+      "author": "RookieApe-tao",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "filesystem",
+        "plugin-config",
+        "plugin-internals",
+        "network"
+      ],
+      "replacesBuiltin": false,
+      "tag": "token-budget-v1.2.0",
+      "file": "token-budget-v1.2.0.zip",
+      "path": "token-budget-v1.2.0/token-budget-v1.2.0.zip",
+      "size": 16606,
+      "sha256": "ae6d3ed943b81acf23bd185348ea88c08cc4fa15655279ec5c513c6ceaee2a15",
+      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
+      "publishedAt": "2026-11-09T10:08:31.245Z"
     },
     {
       "id": "tophub",
@@ -687,5 +818,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-09T02:01:33.452Z"
+  "generatedAt": "2026-11-09T10:08:31.245Z"
 }

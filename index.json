@@ -3,6 +3,37 @@
   "assetsBase": "https://github.com/RookieApe-tao/dsh-aurabot-qq-mods/releases/download/",
   "modules": [
     {
+      "id": "beg-for-money",
+      "name": "讨饭",
+      "version": "1.0.1",
+      "description": "群友提到打钱时伸手要饭并发收款码，记账要管理员私聊确认，确认后在原群道谢（有印象卡片时加「慷慨」）",
+      "category": "social",
+      "tags": [
+        "讨饭",
+        "记账",
+        "打赏"
+      ],
+      "author": "cdcp998",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "filesystem",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/cdcp998/beg-for-money",
+      "tag": "beg-for-money-v1.0.1",
+      "file": "beg-for-money-v1.0.1.zip",
+      "path": "beg-for-money-v1.0.1/beg-for-money-v1.0.1.zip",
+      "size": 46240,
+      "sha256": "0358257521e0777dcb057b13182e4ecce2438200551a18c525bc8c85dfa1e6e8",
+      "commit": "ab7e148627f9599f97c8f3f3809c17b6cc9de167",
+      "publishedAt": "2026-11-09T01:32:50.993Z"
+    },
+    {
       "id": "browser-ops",
       "name": "逛网页（浏览器自动化）",
       "version": "1.2.0",
@@ -98,6 +129,40 @@
       "publishedAt": "2026-11-02T04:28:57.143Z"
     },
     {
+      "id": "feed",
+      "name": "喂食",
+      "version": "3.2.0",
+      "description": "按作息饿、会自己找零食也会喊饿。饿了有曲线、吃了有反应，还带一块能投喂她、她会回话的面板。",
+      "category": "social",
+      "tags": [
+        "喂食",
+        "饥饿",
+        "好感度",
+        "养成"
+      ],
+      "author": "z729769794",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [
+        "mood",
+        "memory"
+      ],
+      "capabilities": [
+        "filesystem",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "feed-v3.2.0",
+      "file": "feed-v3.2.0.zip",
+      "path": "feed-v3.2.0/feed-v3.2.0.zip",
+      "size": 23370,
+      "sha256": "1dd1fa76a7c07945708d0097ae66393be8c889a098b8847fc4e55d8ffead5354",
+      "commit": "ab7e148627f9599f97c8f3f3809c17b6cc9de167",
+      "publishedAt": "2026-11-09T01:32:50.993Z"
+    },
+    {
       "id": "file-inbox",
       "name": "私聊收件箱",
       "version": "1.3.0",
@@ -160,7 +225,7 @@
     {
       "id": "heybox",
       "name": "刷小黑盒",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "description": "用主人的账号逛小黑盒：看帖子和热评，点赞、评论、发帖。支持谷时逛、扫码登录和浏览器验证。",
       "category": "platform",
       "tags": [
@@ -181,13 +246,13 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "heybox-v1.5.0",
-      "file": "heybox-v1.5.0.zip",
-      "path": "heybox-v1.5.0/heybox-v1.5.0.zip",
-      "size": 76851,
-      "sha256": "f62dbaebe76552b493e45706bf7fc52971c45c7b5e5b589756b00b89f9a8ea55",
-      "commit": "0fa2750ddade64ad32b5a43696a0f8950afb865d",
-      "publishedAt": "2026-11-08T15:38:11.593Z"
+      "tag": "heybox-v1.5.1",
+      "file": "heybox-v1.5.1.zip",
+      "path": "heybox-v1.5.1/heybox-v1.5.1.zip",
+      "size": 77363,
+      "sha256": "7af79a85032c0de2077063d9d8f52bcb2ce2a065fb97ed68a3a7f3457ce67fa6",
+      "commit": "ab7e148627f9599f97c8f3f3809c17b6cc9de167",
+      "publishedAt": "2026-11-09T01:32:50.993Z"
     },
     {
       "id": "history-vault",
@@ -370,6 +435,68 @@
       "sha256": "9ec530ad6b1dd25f713c817aff0a2e65c20811afdfbb8387b6aef47ce19c019a",
       "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
       "publishedAt": "2026-11-06T13:02:22.637Z"
+    },
+    {
+      "id": "price-watch",
+      "name": "价格监控",
+      "version": "1.0.1",
+      "description": "盯住商品价格：超级好价、早期好价、降价提醒、本插件记录的历史最低价；/监控价格 与 /查询价格 支持多平台比价。",
+      "category": "tool",
+      "tags": [
+        "价格",
+        "监控",
+        "比价"
+      ],
+      "author": "cdcp998",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/cdcp998/price-watch",
+      "tag": "price-watch-v1.0.1",
+      "file": "price-watch-v1.0.1.zip",
+      "path": "price-watch-v1.0.1/price-watch-v1.0.1.zip",
+      "size": 45328,
+      "sha256": "d82938e40da850f89198ee707b27f84c63c2fb90d68b770274ce536fa7731c86",
+      "commit": "ab7e148627f9599f97c8f3f3809c17b6cc9de167",
+      "publishedAt": "2026-11-09T01:32:50.993Z"
+    },
+    {
+      "id": "roast-mode",
+      "name": "毒舌模式",
+      "version": "1.0.4",
+      "description": "主人发关键字开关的损友式吐槽模式：开着时整段接管该聊天，语料可改读文本文件（每行一句）",
+      "category": "social",
+      "tags": [
+        "毒舌",
+        "吐槽",
+        "互动"
+      ],
+      "author": "RookieApe-tao",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "filesystem",
+        "process",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "roast-mode-v1.0.4",
+      "file": "roast-mode-v1.0.4.zip",
+      "path": "roast-mode-v1.0.4/roast-mode-v1.0.4.zip",
+      "size": 9014,
+      "sha256": "1f376852fd3f6b820ac50958cd0572be58c417cfa993c9aa7954387f3e2c9896",
+      "commit": "ab7e148627f9599f97c8f3f3809c17b6cc9de167",
+      "publishedAt": "2026-11-09T01:32:50.993Z"
     },
     {
       "id": "room3d",
@@ -560,5 +687,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-08T15:38:11.593Z"
+  "generatedAt": "2026-11-09T01:32:50.993Z"
 }

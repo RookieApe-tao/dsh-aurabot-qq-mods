@@ -5,14 +5,15 @@
     {
       "id": "aura-mimo",
       "name": "aura-mimo",
-      "version": "1.0.0",
-      "description": "用一段参考音频零训练克隆音色，接入小米 MiMo TTS，让她用自己的声音说话。",
+      "version": "1.1.2",
+      "description": "用一段参考音频零训练克隆音色，调小米 MiMo TTS 合成语音。可以单独用，也可以改名为 voice 接管内置语音。",
       "category": "creative",
       "tags": [
         "语音",
         "TTS",
         "音色克隆",
-        "MiMo"
+        "MiMo",
+        "接管语音"
       ],
       "author": "zcx1021",
       "license": "MIT",
@@ -26,13 +27,46 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "aura-mimo-v1.0.0",
-      "file": "aura-mimo-v1.0.0.zip",
-      "path": "aura-mimo-v1.0.0/aura-mimo-v1.0.0.zip",
-      "size": 23294,
-      "sha256": "c607e4848d482a52930b15949f5aa962c6d5285cdd74405060d899aa0081f4b9",
-      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
-      "publishedAt": "2026-11-09T10:08:31.245Z"
+      "tag": "aura-mimo-v1.1.2",
+      "file": "aura-mimo-v1.1.2.zip",
+      "path": "aura-mimo-v1.1.2/aura-mimo-v1.1.2.zip",
+      "size": 25844,
+      "sha256": "42d84f77d72c10f2685ab8ec3c9bf7214e2cea7abea4cf1a9f784b4092d7e1c6",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
+    },
+    {
+      "id": "autonomy",
+      "name": "自主生活",
+      "version": "0.6.1",
+      "description": "让她自己决定这一刻做什么、下次什么时候醒。运行时不预设任何权限：调模型、操作手机都要主人在面板里逐项授权后才生效。",
+      "category": "desktop",
+      "tags": [
+        "自主",
+        "生活",
+        "手机"
+      ],
+      "author": "asyncxt",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "filesystem",
+        "process",
+        "network",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "homepage": "https://github.com/asyncxt/aurabot-mod-autonomy",
+      "tag": "autonomy-v0.6.1",
+      "file": "autonomy-v0.6.1.zip",
+      "path": "autonomy-v0.6.1/autonomy-v0.6.1.zip",
+      "size": 44324,
+      "sha256": "27c05ceaec78a0c27637e17e42c7b6323067c080a4fe591e518e9c78cccaf407",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
     },
     {
       "id": "beg-for-money",
@@ -96,6 +130,37 @@
       "sha256": "5fad466335d3427467f69745bef5ea52caaa917afa53e16636d1a23de16b2214",
       "commit": "0fa2750ddade64ad32b5a43696a0f8950afb865d",
       "publishedAt": "2026-11-08T15:38:11.593Z"
+    },
+    {
+      "id": "daily-art",
+      "name": "每日推图 · 逛图站",
+      "version": "3.2.0",
+      "description": "在同一页管理 Konachan 和 Yande.re 定时推图及 QQ 按需找图。",
+      "category": "platform",
+      "tags": [
+        "图片",
+        "定时",
+        "Konachan"
+      ],
+      "author": "Reinero",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "daily-art-v3.2.0",
+      "file": "daily-art-v3.2.0.zip",
+      "path": "daily-art-v3.2.0/daily-art-v3.2.0.zip",
+      "size": 36537,
+      "sha256": "3466cace471bbd701b3473c8dd6f60c6d740099cff2b0bcd28c01166f9a7d9ca",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
     },
     {
       "id": "douyin",
@@ -317,7 +382,7 @@
     {
       "id": "kanzhibo",
       "name": "抖音看直播",
-      "version": "1.0.0",
+      "version": "1.0.3",
       "description": "用独立浏览器（Edge/Chrome）经 CDP 挂在抖音直播间：进房、发一条定制评论、续粉丝团灯牌、主人在 QQ 私聊里命令发弹幕、开播主动提醒；点之前先验面板，点后按 +100 / 聊天播报 / 进度三级确认。",
       "category": "platform",
       "tags": [
@@ -340,13 +405,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "kanzhibo-v1.0.0",
-      "file": "kanzhibo-v1.0.0.zip",
-      "path": "kanzhibo-v1.0.0/kanzhibo-v1.0.0.zip",
-      "size": 106069,
-      "sha256": "a6e25814e726cf07142bb44200bd0fd8749971514f063ea9a3ea1129d640ca83",
-      "commit": "07b0fb419410484c2878a634cd9875aee9d9f845",
-      "publishedAt": "2026-11-09T10:08:31.245Z"
+      "tag": "kanzhibo-v1.0.3",
+      "file": "kanzhibo-v1.0.3.zip",
+      "path": "kanzhibo-v1.0.3/kanzhibo-v1.0.3.zip",
+      "size": 110354,
+      "sha256": "ab5c96085aa43255fab90aa7c34549c5ee32a8b992ae373afc6c060018255ac3",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
     },
     {
       "id": "meme-wiki",
@@ -474,7 +539,7 @@
     {
       "id": "pet",
       "name": "桌宠",
-      "version": "1.0.16",
+      "version": "1.0.17",
       "description": "把大肥鱼请到桌面上：会冒气泡、做小动作，你在干活时也陪着你。",
       "category": "desktop",
       "tags": [
@@ -495,18 +560,18 @@
       ],
       "replacesBuiltin": false,
       "homepage": "https://github.com/accomplish07zrh-eng/dsh-aurabot-qq",
-      "tag": "pet-v1.0.16",
-      "file": "pet-v1.0.16.zip",
-      "path": "pet-v1.0.16/pet-v1.0.16.zip",
-      "size": 223118,
-      "sha256": "d3f9cf77df2459f1d2fe15bd81fa79f03d47b4e75ed4e2f41ce4885d120d9f2d",
-      "commit": "7458e01a9310b8ed203879de3e93760b5c4564d5",
-      "publishedAt": "2026-11-09T02:01:33.452Z"
+      "tag": "pet-v1.0.17",
+      "file": "pet-v1.0.17.zip",
+      "path": "pet-v1.0.17/pet-v1.0.17.zip",
+      "size": 223775,
+      "sha256": "6f8711bc8ed4c8f870b74bf008e83436066c43d530c7a6b539f235492a46111c",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
     },
     {
       "id": "phone",
       "name": "手机逛逛",
-      "version": "0.3.1",
+      "version": "0.4.0",
       "description": "通过 ADB 操控 Android 手机：按主人教好的流程自动签到/浏览/点赞，或自由推理完成一句话任务",
       "category": "platform",
       "tags": [
@@ -527,13 +592,13 @@
         "plugin-internals"
       ],
       "replacesBuiltin": false,
-      "tag": "phone-v0.3.1",
-      "file": "phone-v0.3.1.zip",
-      "path": "phone-v0.3.1/phone-v0.3.1.zip",
-      "size": 78718,
-      "sha256": "9ec530ad6b1dd25f713c817aff0a2e65c20811afdfbb8387b6aef47ce19c019a",
-      "commit": "d70da76059b6fd0edc4ee6b6d10216f1628058f1",
-      "publishedAt": "2026-11-06T13:02:22.637Z"
+      "tag": "phone-v0.4.0",
+      "file": "phone-v0.4.0.zip",
+      "path": "phone-v0.4.0/phone-v0.4.0.zip",
+      "size": 118709,
+      "sha256": "e87bd979be47d0a3d70237fe9f8f34ea7f784004ff1fce4b8b8af4a945174723",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
     },
     {
       "id": "price-watch",
@@ -658,6 +723,72 @@
       "sha256": "ccd91233501937f327f01be6b3b72c7b94647dd48dfa042e63530d60f9980312",
       "commit": "262c27e34f4b248cb8e0ad13383679c0a16148c3",
       "publishedAt": "2026-11-05T16:25:13.800Z"
+    },
+    {
+      "id": "stardew",
+      "name": "星露谷",
+      "version": "1.1.0",
+      "description": "让鱼自己在后台玩《星露谷物语》：读游戏文字状态、自己决定做什么，再让 SMAPI 模组去执行。需要先装游戏侧模组 Blind Whale Farmer（原文见 README，游戏模组不随本模块分发，请去原帖下载）。",
+      "category": "tool",
+      "tags": [
+        "星露谷",
+        "游戏",
+        "自己玩"
+      ],
+      "author": "neige",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.3.0",
+      "requires": [],
+      "capabilities": [
+        "network",
+        "filesystem",
+        "process",
+        "dynamic-code",
+        "plugin-config",
+        "plugin-internals"
+      ],
+      "replacesBuiltin": false,
+      "tag": "stardew-v1.1.0",
+      "file": "stardew-v1.1.0.zip",
+      "path": "stardew-v1.1.0/stardew-v1.1.0.zip",
+      "size": 23363,
+      "sha256": "df2a52bd323d3c4ee9b13a683d33f64c659ad131275afd5b06b88e5da93d3940",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
+    },
+    {
+      "id": "starmap",
+      "name": "星图",
+      "version": "1.1.0",
+      "description": "把 Aurabot 自己的记忆渲染成可交互的星图，两种看法：关系星图看结构，银河云图看时间。",
+      "category": "tool",
+      "tags": [
+        "星图",
+        "记忆",
+        "识海",
+        "银河",
+        "可视化"
+      ],
+      "author": "zcx1021",
+      "license": "MIT",
+      "api": 1,
+      "minPluginVersion": "1.2.0",
+      "requires": [],
+      "capabilities": [
+        "filesystem",
+        "plugin-internals",
+        "plugin-config",
+        "network"
+      ],
+      "replacesBuiltin": false,
+      "tag": "starmap-v1.1.0",
+      "file": "starmap-v1.1.0.zip",
+      "path": "starmap-v1.1.0/starmap-v1.1.0.zip",
+      "size": 35001,
+      "sha256": "b32990720df229e23114fe264d385e3faaa00ce53d332d993a08639c364b3694",
+      "commit": "7791e955408ea84c2a40c9b4a250617aa1be77ce",
+      "publishedAt": "2026-11-10T05:13:52.313Z"
     },
     {
       "id": "tieba-reader",
@@ -818,5 +949,5 @@
     }
   ],
   "revoked": [],
-  "generatedAt": "2026-11-09T10:08:31.245Z"
+  "generatedAt": "2026-11-10T05:13:52.313Z"
 }

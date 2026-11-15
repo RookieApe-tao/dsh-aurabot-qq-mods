@@ -1,0 +1,23 @@
+{
+  "id": "persona-memory",
+  "name": "人设记忆管理",
+  "version": "0.1.0",
+  "description": "整理长期聊天与角色经历，按需回忆、减少重复上下文，支持查看编辑和保留人设重置。与「跨会话记忆」互斥，需完整适配包。问题反馈：QQ1365641547。",
+  "category": "manage",
+  "tags": [
+    "记忆",
+    "人设",
+    "长期互动"
+  ],
+  "author": "Yobak",
+  "license": "MIT",
+  "api": 1,
+  "minPluginVersion": "1.3.0",
+  "requires": [],
+  "capabilities": [
+    "network",
+    "filesystem",
+    "plugin-config",
+    "plugin-internals"
+  ]
+}

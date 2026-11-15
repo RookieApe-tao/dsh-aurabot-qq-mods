@@ -21,7 +21,7 @@ export class MemoryService {
   }
   get store(){ if(!this._store)this._store=new MemoryStore(this.file,{now:this.now});return this._store }
   config(){return settings(this.readSettings())}
-  lifecycle(){return (this._store || existsSync(this.file)) ? this.store.meta('lifecycle',{state:'never',generation:0}) : {state:'never',generation:0}}
+  lifecycle(){return (this._store || (this.file && existsSync(this.file))) ? this.store.meta('lifecycle',{state:'never',generation:0}) : {state:'never',generation:0}}
   generation(){return this.lifecycle().generation}
   active(){return !this.disposed && this.started && this.config().enabled && this.lifecycle().state==='active'}
   assertActive(){if(!this.active())throw new Error('长期记忆尚未启用或正在暂停');if(this.store.meta('management-sync'))throw Error('资料已保存，上下文清理待恢复')}
@@ -32,7 +32,7 @@ export class MemoryService {
     return {settings:this.config(),presets:{balanced:preset('balanced'),economy:preset('economy')},health:queueHealth(queue,budget||{}),compatibility:this.bridge?.compatibilityStatus?.()||null,lifecycle:life,active:this.active(),scopes:this._store ? this.store.scopes().map(s=>({...s,...describeScope(s,this.store.person(s).data),counts:this.store.statistics(s)})):[],usage:this._store ? this.store.usage():zero,nativeUsage:this._store?this.store.usage(undefined,'native'):zero,budget,chatUsage:this._store?this.store.usage(undefined,'chat'):zero,gameplayUsage:this._store?this.store.usage(undefined,'gameplay'):zero,queue,archiveGap:this._store?this.store.meta('archive-gap'):null,capabilities:this.preflight(),pendingResets:this._store ? this.resetter().pending():[]}
   }
   preflight(){
-    const supported=new Set(this.bridge?.capabilities || [])
+    const supported=new Set(Array.isArray(this.bridge?.capabilities) ? this.bridge.capabilities : [])
     const missing=REQUIRED_CAPABILITIES.filter(c=>!supported.has(c))
     for(const method of ['prepare','activate','pause','currentScope','resetParticipants']) if(typeof this.bridge?.[method]!=='function')missing.push('接口:'+method)
     return {ready:missing.length===0 && this.bridge?.api===1,missing,api:this.bridge?.api || 0}

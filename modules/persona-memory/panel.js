@@ -51,6 +51,12 @@ return function Panel(){
   const r=await call('/prepare',{mode:startMode});if(r.ok)E(r);return r
  }
  if(!data)return h('div',{className:'pm-status'},message||'正在读取记忆模块状态…')
+ if(!data.capabilities.ready)return h('div',{className:'pm-panel',ref:panelRef},h('style',null,styles),
+  h('section',{className:'pm-box'},h('div',{className:'pm-row'},h('h3',null,'人设记忆管理')),
+   h('p',{role:'status'},'这个 Aurabot 环境还不能启用人设记忆管理。需要支持记忆接管的 Aurabot 与 DSH 环境。'),
+   h('details',null,h('summary',null,'兼容检查详情'),h('p',{className:'pm-pre'},data.capabilities.missing.join('\n'))),
+   h('div',{className:'pm-row'},button('刷新状态',load)),
+   message?h('p',{role:'alert'},message):null))
  return h('div',{className:'pm-panel',ref:panelRef},h('style',null,styles),
   h('div',{className:'pm-row'},h('h3',null,'人设记忆管理'),h('label',{className:'pm-row'},'开启',h('input',{type:'checkbox',className:'pm-switch',role:'switch','aria-label':'开启人设记忆管理',checked:data.active,disabled:busy,onChange:run(toggle)}))),
   h('div',{className:'pm-status',role:'status'},stateLabels[state]||'状态待核对'),
@@ -79,7 +85,6 @@ return function Panel(){
     button('整理新增记录',async()=>{const r=await call('/organize',{});await load();if(r.ok)M(`已安排 ${r.queued} 批；受今日额度限制，不会重跑整个历史。`);return r},!data.active),
     button('查看旧资料接续',async()=>{const r=await call('/legacy');if(r.ok)LG(r);return r},state==='never'),
     hint('原话保留与检索均在本地进行。只有新增内容整理使用额外模型请求；用量未知时保守计入预占。'),
-    !data.capabilities.ready?h('div',{className:'pm-status'},'宿主兼容检查未通过，尚不能开启。',h('details',null,h('summary',null,'技术检查详情'),h('p',{className:'pm-pre'},data.capabilities.missing.join('\n')))):null,
     data.pendingResets?.length?h('div',{className:'pm-stack'},...data.pendingResets.map(r=>h('div',{className:'pm-box',key:r.id},hint('未完成的清理：'+r.error),button('继续完成清理',async()=>{const result=await call('/reset-resume',{id:r.id});await load();return result})))):null
    )),
    data.compatibility?h('details',{className:'pm-fold'},h('summary',null,'与其他模块一起使用'),h('div',{className:'pm-fold-body'},hint(data.compatibility.rule),...data.compatibility.rows.map(m=>h('div',{className:'pm-box',key:m.id},h('strong',null,`${m.name} · ${m.status}`),hint(`${m.installed?(m.active?'正在运行':'已停用'):'未安装'}${m.version?' · '+m.version:''}`),hint(m.note))))):null,

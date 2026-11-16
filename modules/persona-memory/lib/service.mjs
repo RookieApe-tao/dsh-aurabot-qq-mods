@@ -1,4 +1,4 @@
-import {describeScope,queueHealth} from './presentation.mjs'
+import {describeScope,organizerFailureSummary,queueHealth} from './presentation.mjs'
 import { existsSync } from 'node:fs'
 import { MemoryStore } from './store.mjs'
 import { ResetCoordinator } from './reset.mjs'
@@ -29,7 +29,13 @@ export class MemoryService {
     const life=this.lifecycle()
     const zero={attempts:0,inputTokens:0,outputTokens:0}
     const queue=this._store?this.store.db.prepare('SELECT status,COUNT(*) count,MIN(created_at) oldest FROM jobs GROUP BY status').all():[],budget=this._store?this.store.budgetStatus(this.config()):null
-    return {settings:this.config(),presets:{balanced:preset('balanced'),economy:preset('economy')},health:queueHealth(queue,budget||{}),compatibility:this.bridge?.compatibilityStatus?.()||null,lifecycle:life,active:this.active(),scopes:this._store ? this.store.scopes().map(s=>({...s,...describeScope(s,this.store.person(s).data),counts:this.store.statistics(s)})):[],usage:this._store ? this.store.usage():zero,nativeUsage:this._store?this.store.usage(undefined,'native'):zero,budget,chatUsage:this._store?this.store.usage(undefined,'chat'):zero,gameplayUsage:this._store?this.store.usage(undefined,'gameplay'):zero,queue,archiveGap:this._store?this.store.meta('archive-gap'):null,capabilities:this.preflight(),pendingResets:this._store ? this.resetter().pending():[]}
+    const failureReasons=this._store ? organizerFailureSummary(this.store.db.prepare(`
+      SELECT j.status,j.error,u.output_actual,u.output_reserved,COUNT(*) AS count
+      FROM jobs j LEFT JOIN usage u ON u.id=j.request_id
+      WHERE j.status IN ('failed','unknown')
+      GROUP BY j.status,j.error,u.output_actual,u.output_reserved
+    `).all()) : []
+    return {settings:this.config(),presets:{balanced:preset('balanced'),economy:preset('economy')},health:queueHealth(queue,budget||{}),failureReasons,compatibility:this.bridge?.compatibilityStatus?.()||null,lifecycle:life,active:this.active(),scopes:this._store ? this.store.scopes().map(s=>({...s,...describeScope(s,this.store.person(s).data),counts:this.store.statistics(s)})):[],usage:this._store ? this.store.usage():zero,nativeUsage:this._store?this.store.usage(undefined,'native'):zero,budget,chatUsage:this._store?this.store.usage(undefined,'chat'):zero,gameplayUsage:this._store?this.store.usage(undefined,'gameplay'):zero,queue,archiveGap:this._store?this.store.meta('archive-gap'):null,capabilities:this.preflight(),pendingResets:this._store ? this.resetter().pending():[]}
   }
   preflight(){
     const supported=new Set(Array.isArray(this.bridge?.capabilities) ? this.bridge.capabilities : [])

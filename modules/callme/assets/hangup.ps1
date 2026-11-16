@@ -1,4 +1,4 @@
-# 挂断当前 QQ 语音/视频通话
+﻿# 挂断当前 QQ 语音/视频通话
 # 找通话窗口里的「挂断 / 退出通话 / 结束通话 / 取消」按钮并点击。
 param([string]$LogFile = "")
 
@@ -13,18 +13,7 @@ $AE = [System.Windows.Automation.AutomationElement]
 $S = [System.Windows.Automation.TreeScope]
 $CT = [System.Windows.Automation.ControlType]
 
-function Click-Element($el) {
-  try {
-    $pat = $null
-    if ($el.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pat)) { $pat.Invoke(); return $true }
-  } catch {}
-  try {
-    $r = $el.Current.BoundingRectangle
-    if ($r.Width -gt 0 -and $r.Height -gt 0) {
-      Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
-      Start-Sleep -Milliseconds 120
-      Add-Type -TypeDefinition @"
+$hcSig = @'
 using System;
 using System.Runtime.InteropServices;
 public class HC {
@@ -37,7 +26,20 @@ public class HC {
     mouse_event(0x0004, 0, 0, 0, IntPtr.Zero);
   }
 }
-"@ -ErrorAction SilentlyContinue
+'@
+if (-not ("HC" -as [type])) { Add-Type -TypeDefinition $hcSig -ErrorAction SilentlyContinue }
+
+function Click-Element($el) {
+  try {
+    $pat = $null
+    if ($el.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pat)) { $pat.Invoke(); return $true }
+  } catch {}
+  try {
+    $r = $el.Current.BoundingRectangle
+    if ($r.Width -gt 0 -and $r.Height -gt 0) {
+      Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
+      Start-Sleep -Milliseconds 120
       [HC]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
       return $true
     }

@@ -10,7 +10,8 @@ import { join } from 'node:path'
 
 import mod from '../index.mjs'
 
-const DAY = '2026-11-15'
+const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const DAY = dayKey()
 const BODY = '今天在公园看锦鲤，红的一片挤过来。'
 
 /** 建一个临时根目录，用例结束自动删。 */
@@ -84,7 +85,7 @@ test('第一次写落一份 md，同一天再写往后编号，旧的不覆盖',
   assert.equal(existsSync(day1), true)
 
   const text = readFileSync(day1, 'utf8')
-  assert.match(text, /^---\ndate: 2026-11-15\n/)
+  assert.match(text, new RegExp(`^---\ndate: ${DAY}\n`))
   assert.match(text, /mood: "心情不错"/)
   assert.match(text, /chats: 3/)
   assert.ok(text.includes(BODY), '正文应该原样落进文件')

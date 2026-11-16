@@ -5,8 +5,8 @@
 // 旧版把素材放模块目录 assets/ 的，启动时直接搬进 dataDir，不用重新下载。
 // 状态读写在本模块的 dataDir 下（模块目录禁写，会被 3 秒扫描触发重载）。
 
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync, mkdirSync, rmSync, unlinkSync } from 'node:fs'
-import { join, dirname, sep } from 'node:path'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync, renameSync, mkdirSync, rmSync, unlinkSync } from 'node:fs'
+import { join, dirname, sep, basename } from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 
 const ASSET_CHECK_MS = 10 * 60 * 1000 // 素材缺失时的兜底轮询间隔
@@ -29,7 +29,7 @@ const MIME = {
 export default {
   id: 'room3d',
   name: '房间',
-  version: '1.0.3',
+  version: '1.0.4',
   api: 1,
   description: '给她一个自己的 3D 房间：屋里空着，只有她一个人（大肥鱼），家具自己摆；她看得见自己在哪。',
   panel: 'panel.js',
@@ -70,7 +70,7 @@ export default {
     const roomHooks = api.__roomTestHooks || {} // 测试注入 fake fetchZip，不打真网络
 
     // ---------- 动作素材：不进模块包，运行时下载落位（pet 素材包同款模式） ----------
-    // 模块包里只带代码 + vendor（three.js 等小文件）；111 个动作视频（50MB+）按仓库惯例
+    // 模块包里只带代码 + vendor（three.js 等小文件）；106 个动作视频（50MB+）按仓库惯例
     // 放独立素材仓，插件启动发现缺素材自动下载到 dataDir/assets/。失败不炸（页面只是
     // 没有动作可放），走 every 兜底轮询重试；地址可在面板换镜像。
     // zip 内容约定：素材放**文件夹**里（archive 自带的 <仓库名>-<分支>/ 顶层目录会自动剥）。
@@ -82,8 +82,24 @@ export default {
         return readdirSync(base).filter((n) => n.toLowerCase().endsWith('.webm'))
       } catch { return [] }
     }
-    // 素材齐不齐：dataDir 里至少有一个 .webm
-    const assetsReady = () => webmOf(assetsDir).length > 0
+    // 素材齐不齐：dataDir 里至少有一个正常文件名的 .webm（带反斜杠的旧版错误落位不算）。
+    const assetsReady = () => webmOf(assetsDir).some((n) => !n.includes('\\'))
+    // 旧版解压 Windows 生成的 zip 时没把反斜杠归一成目录分隔符，素材会落成
+    // 「assets/room3d-assets\待机呼吸休闲.webm」这种字面文件名；页面按正常名字取不到，
+    // 角色就只剩阴影和名字标签。启动时把这类存量文件改名修正，不用重新下载。
+    const assetFileName = (name) => basename(String(name || '').replace(/\\/g, '/'))
+    function repairFlatAssetNames() {
+      let fixed = 0
+      try {
+        for (const name of webmOf(assetsDir)) {
+          const clean = assetFileName(name)
+          if (!clean || clean === name) continue
+          try { renameSync(join(assetsDir, name), join(assetsDir, clean)); fixed++ } catch {}
+        }
+      } catch {}
+      if (fixed) api.log.info(`房间：修正了 ${fixed} 个旧版错误命名的动作素材`)
+      return fixed
+    }
     // 旧版把素材放模块目录的：直接搬进 dataDir（同盘复制几十 MB 也要几秒，但比重新下载强）
     const migrateLegacyAssets = () => {
       const old = webmOf(legacyAssetsDir)
@@ -117,7 +133,9 @@ export default {
         const commentLen = u16(ptr + 32)
         const externAttr = u32(ptr + 38)
         const localOff = u32(ptr + 42)
-        const name = zip.toString('utf8', ptr + 46, ptr + 46 + nameLen)
+        // Windows 资源管理器/部分打包工具生成的 zip 用反斜杠当目录分隔符；统一归一成 /，
+        // 否则在 Linux/macOS 上会被当成文件名的一部分，素材落位后页面永远 404（#18 影子）。
+        const name = zip.toString('utf8', ptr + 46, ptr + 46 + nameLen).replace(/\\/g, '/')
         ptr += 46 + nameLen + extraLen + commentLen
         if (name.endsWith('/')) { mkdirSync(join(destDir, name), { recursive: true }); continue }
         // 符号链接条目直接跳过。判据看 externalAttr 高 16 位（Unix st_mode）的类型位：
@@ -142,9 +160,11 @@ export default {
     }
     async function fetchZipTo(url, file) {
       assertDownloadUrl(url)
-      const fetchZip = roomHooks.fetchZip || ((u) => fetch(u))
+      const fetchZip = roomHooks.fetchZip || ((u) => fetch(u, { signal: AbortSignal.timeout(60_000) }))
       const res = await fetchZip(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}（${url}）`)
+      const contentType = String(res.headers?.get?.('content-type') || '').toLowerCase()
+      if (contentType.startsWith('text/html')) throw new Error(`下载地址返回的是网页而不是 zip（${url}）；请检查地址是否失效或被登录页拦截`)
       const declared = Number(res.headers?.get?.('content-length') || 0)
       if (declared > ASSET_MAX_BYTES) throw new Error(`响应过大（${declared} 字节 > 上限 ${ASSET_MAX_BYTES}）`)
       const buf = Buffer.from(await res.arrayBuffer())
@@ -167,6 +187,11 @@ export default {
       return null
     }
     let assetDownloading = false // 并发闸：自动轮询 + 手动重下同时触发时不重复下
+    // 诊断信息：面板/健康检查能看到「为什么没有影子之外的东西」。
+    const assetStatus = { lastError: '', lastErrorAt: 0, lastSuccessAt: 0, lastUrl: '', lastCount: 0 }
+    const assetHint = () => assetsReady()
+      ? ''
+      : '素材包还没就绪：请确认网络能访问素材地址；GitHub 直连失败时可在模块设置里把「动作素材包下载地址」换成 https 镜像直链，再点「重新下载素材」。'
     /**
      * 下载并落位动作素材包。
      * @param {boolean} force true = 已有素材也重新下载（面板手动重下）；false = 只在缺素材时下载
@@ -176,7 +201,8 @@ export default {
       if (assetDownloading) return { ok: false, message: '素材包正在下载中，别急' }
       if (!force && assetsReady()) return { ok: true, skipped: true, message: '动作素材已就位，不用下载' }
       const url = String((api.settings() || {}).roomAssetUrl || '').trim()
-      if (!url) return { ok: false, message: '没有配置素材包下载地址（面板「房间」设置里填）' }
+      if (!url) return { ok: false, message: '没有配置素材包下载地址（面板「房间」设置里填）', hint: assetHint() }
+      assetStatus.lastUrl = url
       assetDownloading = true
       const stage = api.dataDir('assets-staging') // 解压暂存：校验通过才落位，失败不污染 assets/
       try {
@@ -193,12 +219,17 @@ export default {
         }
         if (copied === 0) throw new Error('素材文件夹里没有 .webm 文件')
         api.log.info(`房间：动作素材包已下载落位（${copied} 个视频 → assets/）`)
+        assetStatus.lastError = ''
+        assetStatus.lastSuccessAt = Date.now()
+        assetStatus.lastCount = copied
         registerAssetRoutes()
         return { ok: true, count: copied, message: `素材包下载完成（${copied} 个动作视频）` }
       } catch (error) {
         const msg = `素材包下载失败：${String(error?.message || error).slice(0, 200)}`
+        assetStatus.lastError = msg
+        assetStatus.lastErrorAt = Date.now()
         api.log.warn(msg)
-        return { ok: false, message: msg }
+        return { ok: false, message: msg, hint: assetHint() }
       } finally {
         assetDownloading = false
         try { rmSync(stage, { recursive: true, force: true }) } catch {}
@@ -207,6 +238,7 @@ export default {
     }
     // 启动：先搬旧版模块目录里的存量素材（免下载），还缺才在 5 秒后下载 + 每 10 分钟兜底查。
     // 测试环境（注入了 __roomTestHooks）一律跳过——测试不打真网络，靠手动调 ensureAssets + fake fetchZip。
+    repairFlatAssetNames()
     if (!roomHooks.skipAutoAssets) {
       migrateLegacyAssets()
       if (!assetsReady()) {
@@ -499,7 +531,16 @@ export default {
         ok: true,
         source: 'aurabot-room3d',
         spot: s.xiaoyu?.spot || '',
-        assets: { ready: assetsReady(), count: assetsReady() ? webmOf(assetsDir).length : 0, downloading: assetDownloading },
+        assets: {
+          ready: assetsReady(),
+          count: assetsReady() ? webmOf(assetsDir).length : 0,
+          downloading: assetDownloading,
+          url: String((api.settings() || {}).roomAssetUrl || ''),
+          lastError: assetStatus.lastError,
+          lastErrorAt: assetStatus.lastErrorAt,
+          lastSuccessAt: assetStatus.lastSuccessAt,
+          hint: assetHint(),
+        },
       }
     })
 

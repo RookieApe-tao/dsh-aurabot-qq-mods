@@ -2,7 +2,7 @@
 const { app, BrowserWindow, session } = require('electron');
 const { validUrl, allowNavigation, configureCookies, clearSession } = require('./session.cjs');
 const { createConnection } = require('node:net');
-const { waitForLogin } = require('./login.cjs');
+const { waitForLogin, LOGIN_PROBE } = require('./login.cjs');
 const fs = require('node:fs');
 const { join } = require('node:path');
 const profile = process.env.AURABOT_TIEBA_PROFILE;
@@ -56,16 +56,7 @@ async function execute(req, progress) {
       probe: async () => {
         if (!win || win.isDestroyed() || win.webContents.isLoadingMainFrame()) return null;
         if (new URL(win.webContents.getURL()).origin !== 'https://tieba.baidu.com') return null;
-        return win.webContents.executeJavaScript(`(async () => {
-          if (/安全验证|访问验证|验证码/.test(document.title) || document.querySelector('#captcha,#vcode,#wappassverify')) return { loggedIn: null };
-          try {
-            const response = await fetch('/f/user/json_userinfo', { credentials: 'include', cache: 'no-store', signal: AbortSignal.timeout(5000) });
-            if (!response.ok) return { loggedIn: null };
-            const j = await response.json(); const user = j?.data?.user || j?.data || j?.user || j;
-            const name = user?.user_name || user?.name_show || user?.user_name_show;
-            return name ? { loggedIn: true, name: String(name).slice(0,100) } : { loggedIn: false };
-          } catch { return { loggedIn: null }; }
-        })()`);
+        return win.webContents.executeJavaScript(LOGIN_PROBE);
       },
     });
   }

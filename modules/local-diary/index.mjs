@@ -24,7 +24,7 @@ const quiet = (fn) => { try { return fn() } catch { return undefined } }
 export default {
   id: 'local-diary',
   name: '私人日记',
-  version: '1.0.0',
+  version: '1.0.1',
   api: 1,
   description: '每天写一篇 md 私人日记到本地文件夹，写给她自己看；随插件备份一起搬家',
   defaults: {

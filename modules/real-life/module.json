@@ -1,0 +1,25 @@
+{
+  "id": "real-life",
+  "name": "生理模块",
+  "version": "1.1.0",
+  "description": "让你的bot拥有真人一般的作息和生理状态！目前支持：一日三餐饥饿与讨食、喝水与上厕所暂离、晚间洗澡吹头发、困倦入睡与做梦概率唤醒、28天生理周期（痛经怕冷与投喂哄人互动），以及日常自主/被动听令双模式。",
+  "category": "social",
+  "tags": [
+    "作息",
+    "生理周期",
+    "养成",
+    "饥饿投喂",
+    "睡眠做梦"
+  ],
+  "author": "WhiteBr1ck",
+  "license": "MIT",
+  "homepage": "https://github.com/WhiteBr1ck/aurabot-mod-real-life",
+  "api": 1,
+  "minPluginVersion": "1.2.0",
+  "requires": [],
+  "capabilities": [
+    "filesystem",
+    "plugin-config",
+    "plugin-internals"
+  ]
+}

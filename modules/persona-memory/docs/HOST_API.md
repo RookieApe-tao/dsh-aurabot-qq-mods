@@ -16,6 +16,7 @@
 - 宿主在模块加载前标识 `api: 1`，声明可验证的能力并提供绑定、配置、解绑和当前角色接口。模块经 `configure` 提交迁移器与重置参与方。
 - `prepare` 返回已验证的预览。 `activate` 成功时报告 `verified: true, singleProvider: true`。 `pause` 成功时报告 `verified: true, contextCleared: true`。 `prepareNative` 和 `activateNative` 负责切回同一档案。
 - `previewSessionReset`、`validateSessionReset` 和 `clearSessions` 共用同一份目标名单。归档失败保留待完成的重置，重试按原预览目标继续。扩展资料由匹配的参与方处理。
+- 后台日/月整理会给 `model` 传可选的 `reasoningEffort: 'off'`，请宿主只在提供方支持时使用。返回值可包含 `finishReason` 与实际用量，供模块识别输出截断。原生整理和正常聊天使用各自的模型设置。
 - [入口预检](../lib/host-contract.mjs) 对接口版本、能力和方法校验。缺失或不完整时，模块只注册面板兼容状态。模块本身的版本号按市场规范登记，支持范围由可用宿主能力决定。
 
 请确认在 Aurabot / DSH 中应从哪些已支持入口提供上述语义，以及是否采用此 v1 契约或调整其形态。确认后以第一个实际提供接口的版本作为市场兼容基线，并在干净实例验证市场安装、第二版更新和数据保留。

@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import plugin from '../index.mjs'
-import { canHangup, createCallController, hangupReply, HANGUP_RE, wantsCall, wantsGroupCall } from '../lib/call.mjs'
+import { buildCallArgs, canHangup, createCallController, hangupReply, HANGUP_RE, wantsCall, wantsGroupCall } from '../lib/call.mjs'
 
 const MANIFEST = JSON.parse(readFileSync(new URL('../module.json', import.meta.url), 'utf8'))
 
@@ -34,6 +34,27 @@ test('module.json 和模块本身对得上', () => {
   assert.equal(plugin.api, MANIFEST.api)
   assert.ok(!plugin.defaults.enabled, '关键词自动拨号默认必须是关的')
   assert.ok(plugin.settings.some((s) => s.key === 'cooldownSec'))
+})
+
+test('PowerShell 脚本是 UTF-8 with BOM，Windows PowerShell 5.1 才能正确解析中文', () => {
+  for (const name of ['call-out.ps1', 'hangup.ps1']) {
+    const buf = readFileSync(new URL('../assets/' + name, import.meta.url))
+    assert.deepEqual([...buf.subarray(0, 3)], [0xef, 0xbb, 0xbf], `${name} 缺 UTF-8 BOM`)
+    const text = buf.subarray(3).toString('utf8')
+    assert.ok(!text.includes('\u0000'), `${name} 有 NUL 字节`)
+    assert.match(text, /param\s*\(/, `${name} 缺 param 块`)
+    // 中文引号只允许出现在注释里，代码/字符串用 ASCII 引号
+    const code = text.split(/\r?\n/).filter((line) => !line.trim().startsWith('#')).join('\n')
+    assert.ok(!/[“”‘’]/.test(code), `${name} 代码区混进了中文引号`)
+  }
+})
+
+test('拨号参数：每个值都是独立参数，空格 / 引号 / $ 原样保留', () => {
+  assert.deepEqual(buildCallArgs({ contact: '花辞树' }), ['-Contact', '花辞树'])
+  assert.deepEqual(buildCallArgs({ contact: 'A "B" $HOME', invite: '小 明', inviteQQ: '20002' }), [
+    '-Contact', 'A "B" $HOME', '-Invite', '小 明', '-InviteQQ', '20002',
+  ])
+  assert.deepEqual(buildCallArgs({}), ['-Contact', ''])
 })
 
 test('意图识别：说想打才算，否定句不算', () => {

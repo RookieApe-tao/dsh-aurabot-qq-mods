@@ -1,0 +1,15 @@
+{
+  "id": "mc-rcon",
+  "name": "我的世界服务器分身",
+  "version": "1.5.4",
+  "description": "通过 RCON 住进 Minecraft 服务器：游戏里像群聊一样接话、死亡播报、跨维度 tp、换端自动检测；管理员和普通玩家按权限执行服务器操作。",
+  "category": "social",
+  "tags": ["我的世界", "RCON", "Minecraft", "服务器管理", "游戏"],
+  "platforms": ["qq"],
+  "author": "xiong2641",
+  "license": "MIT",
+  "api": 1,
+  "minPluginVersion": "1.2.0",
+  "requires": [],
+  "capabilities": ["network", "filesystem", "plugin-config", "plugin-internals"]
+}

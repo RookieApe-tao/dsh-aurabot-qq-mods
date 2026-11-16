@@ -17,6 +17,9 @@
     pointer-events:none;white-space:nowrap;transition:opacity .25s}
   #err{position:fixed;inset:0;display:none;place-items:center;color:#ff9b9b;font-size:14px;
     background:rgba(10,12,16,.92);padding:40px;text-align:center;white-space:pre-wrap}
+  #assetWarn{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);max-width:90vw;display:none;z-index:80;
+    padding:8px 14px;border-radius:10px;background:rgba(110,35,40,.94);border:1px solid rgba(255,155,155,.35);
+    color:#ffd9d9;font-size:12px;line-height:1.6;text-align:center}
 </style>
 </head>
 <body>
@@ -28,6 +31,7 @@
 <div id="nx">大肥鱼</div>
 <div id="vignette"></div>
 <div id="err"></div>
+<div id="assetWarn"></div>
 
 <script type="importmap">
 { "imports": { "three": "/aurabot/api/ext/room3d/vendor/three.module.js" } }
@@ -38,6 +42,12 @@ const errBox = document.getElementById('err');
 const fail = (e) => { errBox.style.display = 'grid'; errBox.textContent = '页面出错：\n' + (e && e.message ? e.message : e) + '\n' + ((e && e.stack) || ''); };
 window.addEventListener('error', (ev) => fail(ev.error || ev.message));
 window.addEventListener('unhandledrejection', (ev) => fail(ev.reason));
+
+// 动作素材不是页面代码的一部分：下载失败/文件缺失时角色只剩阴影，必须给一句能排查的提示，
+// 而不是让用户只看到「影子」。面板「房间」页也有同样的素材状态和重新下载按钮。
+const assetWarnBox = document.getElementById('assetWarn');
+const assetWarn = (msg) => { if (assetWarnBox) { assetWarnBox.style.display = 'block'; assetWarnBox.textContent = msg; } };
+const assetWarnClear = () => { if (assetWarnBox) assetWarnBox.style.display = 'none'; };
 
 const THREE = await import('three');
 const { RoundedBoxGeometry } = await import('/aurabot/api/ext/room3d/vendor/RoundedBoxGeometry.js');
@@ -791,6 +801,12 @@ function videoFor(name, owner) {
     v.src = '/aurabot/api/ext/room3d/assets/' + encodeURIComponent(name) + '.webm';
     v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto';
     v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1';
+    v.addEventListener('loadeddata', () => { if (owner === 'xiaoyu') assetWarnClear(); });
+    v.addEventListener('error', () => {
+      if (owner !== 'xiaoyu') return;
+      const detail = v.error && v.error.message ? v.error.message : '素材文件没取到或浏览器不支持 WebM';
+      assetWarn(`动作素材加载失败（${name}.webm）：${detail}。可在面板「房间」页点「重新下载素材」，或把「动作素材包下载地址」换成可访问的 https 镜像直链。`);
+    });
     document.body.appendChild(v);
     v.play().catch(() => {});
     videoCache.set(key, v);
@@ -1467,6 +1483,12 @@ function doAction(who) {
 
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
 function API(p) { return p + (p.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN); }
+
+// 先问服务端素材是否就绪：下载失败时即使视频还没报错，也把原因/重试方式显示出来。
+fetch(API('/aurabot/api/ext/room3d/health')).then((r) => r.json()).then((j) => {
+  const a = j && j.assets;
+  if (a && !a.ready) assetWarn(`动作素材还没就绪${a.downloading ? '（正在下载）' : ''}${a.lastError ? '：' + a.lastError : ''}。可在面板「房间」页点「重新下载素材」，或换素材镜像地址。`);
+}).catch(() => {});
 async function logRoom(who, text) {
   try {
     await fetch(API('/aurabot/api/ext/room3d/api/room/log'), {

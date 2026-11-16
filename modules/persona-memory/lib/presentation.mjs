@@ -5,6 +5,34 @@ export function describeScope(scope,profile={}){
  const name=scope.audience==='system'?(SOURCE_NAMES[String(scope.subject).split(':')[0]]||'其他玩法经历'):(profile.name||profile.nickname||profile.alias||(scope.audience==='group'?'群 ':'QQ ')+scope.subject)
  return {displayName:name,displayLabel:category+' · '+name}
 }
+
+export const ORGANIZER_ERRORS = Object.freeze({
+  limit: '整理输出达到单次上限，回复未完整返回',
+  empty: '整理模型未返回正文',
+  format: '整理模型未返回完整的 JSON',
+  shape: '摘要格式不合法',
+})
+
+export function organizerFailureSummary(rows) {
+  const reasons = new Map()
+  for (const row of rows) {
+    const error = row.error || ''
+    const incomplete = /unexpected end|unterminated|end of (?:json|data)/i.test(error)
+    const reachedLimit = row.output_actual != null && row.output_reserved > 0
+      && row.output_actual >= row.output_reserved
+    let label = '其他整理失败'
+    if (row.status === 'unknown') label = '请求结果未知'
+    else if (error.includes('达到单次上限') || (incomplete && reachedLimit)) label = '输出达到单次上限，回复未完整返回'
+    else if (error === ORGANIZER_ERRORS.empty) label = '模型没有返回整理正文'
+    else if ([ORGANIZER_ERRORS.format, ORGANIZER_ERRORS.shape].includes(error)
+      || incomplete || /not valid JSON|Unexpected token/i.test(error)) label = '模型回复格式不完整'
+    else if (/来源不属于|来源已被人工更正|此范围或人物已停止记录/.test(error)) label = '来源已变化或已停止记录'
+    else if (/来源|必须保留原话|事实值未|约定状态/.test(error)) label = '整理结果未通过来源校验'
+    reasons.set(label, (reasons.get(label) || 0) + Number(row.count ?? 1))
+  }
+  return [...reasons].map(([label, count]) => ({ label, count })).sort((a,b)=>b.count-a.count)
+}
+
 export function queueHealth(queue=[],budget={}){
  const n=status=>queue.filter(x=>x.status===status).reduce((sum,x)=>sum+Number(x.count??x.n??0),0)
  const failed=n('failed'),unknown=n('unknown'),paused=n('paused'),pending=n('pending'),running=n('running'),stale=n('stale')

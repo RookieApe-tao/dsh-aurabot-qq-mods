@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { waitForLogin } from '../lib/login.cjs';
+import { waitForLogin, LOGIN_PROBE } from '../lib/login.cjs';
 
 test('confirmed account saves before closing and reports automatic closure',async()=>{
   let resolveClosed;const closed=new Promise(resolve=>{resolveClosed=resolve;});const events=[];
@@ -23,4 +23,11 @@ test('failed login check keeps window open; failed session save does not close i
   const result=await waitForLogin({closed,probe:async()=>{probes++;throw Error('verification required');},pause:async()=>resolveClosed(),save:async()=>{},close:()=>{throw Error('must stay open');}});
   assert.equal(probes,1);assert.equal(result.loggedIn,null);
   await assert.rejects(waitForLogin({closed:new Promise(()=>{}),probe:async()=>({loggedIn:true,name:'test'}),save:async()=>{throw Error('save failed');},close:()=>{throw Error('must not close');}}),/save failed/);
+});
+
+
+test('登录窗口探测使用 newmoindex/tbs，不再只依赖已下线的 json_userinfo', () => {
+  assert.match(LOGIN_PROBE, /\/mo\/q\/newmoindex\?need_user=1/);
+  assert.match(LOGIN_PROBE, /\/dc\/common\/tbs/);
+  assert.ok(LOGIN_PROBE.indexOf('newmoindex') < LOGIN_PROBE.indexOf('json_userinfo'), '先问 newmoindex，json_userinfo 只作最后兜底');
 });

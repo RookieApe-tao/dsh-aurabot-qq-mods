@@ -40,6 +40,17 @@ export function hangupReply(code) {
 }
 
 /**
+ * 生成 call-out.ps1 的参数数组（纯函数，测试友好）。
+ * 每个值始终是独立参数交给 spawn，不在外面拼命令字符串——联系人里带空格、引号、$ 都不会被拆开或展开。
+ */
+export function buildCallArgs({ contact = '', invite = '', inviteQQ = '' } = {}) {
+  const args = ['-Contact', String(contact)]
+  if (invite) args.push('-Invite', String(invite))
+  if (inviteQQ) args.push('-InviteQQ', String(inviteQQ))
+  return args
+}
+
+/**
  * 拨号状态机。
  * @param {object} o
  * @param {(file: string, args: string[]) => Promise<number>} o.run 起脚本，返回退出码
@@ -71,9 +82,7 @@ export function createCallController({ run, log, now = () => Date.now() }) {
   }
 
   async function dial({ contact, invite = '', inviteQQ = '', callOut }) {
-    const args = ['-Contact', contact]
-    if (invite) args.push('-Invite', invite)
-    if (inviteQQ) args.push('-InviteQQ', inviteQQ)
+    const args = buildCallArgs({ contact, invite, inviteQQ })
     log.info(`[callme] 发起语音通话 -> ${contact}${invite ? `（拉 ${invite} 进来）` : ''}`)
     dialing = true
     try {

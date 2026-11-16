@@ -1,13 +1,14 @@
 // livin 过日子：她自己的一整天。无聊了自己找件事做——不是任务清单，是生活。
 // 调度五闸（空档/自排程/概率/额度/安静）→ 她自己挑 → 执行 → 回味 → 看心情分享 → 自己定下次。
 // 每道闸的判定都落历史：面板要能回答"她今天为什么没醒"。
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync, writeFileSync, renameSync, mkdirSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { makeDocx, readDocxText } from './lib/docx.mjs'
 
 const MIN = 60 * 1000
 const HOUR = 60 * MIN
 const DAY = 24 * HOUR
+const JOY_DO_GAP = 30 * MIN // joy_do 两次之间至少歇这么久：模型想刷就能连着把额度刷完，得兜住
 
 const DEFAULT_POOL = [
   { id: 'douyin', name: '刷会儿抖音', desc: '打开刷抖音模块，随便看看推荐，看到好的记得分享', weight: 1, on: true },
@@ -46,7 +47,7 @@ const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padS
 export default {
   id: 'livin',
   name: '过日子',
-  version: '1.2.1',
+  version: '1.2.2',
   api: 1,
   category: 'desktop',
   tags: ['自主', '乐子', '生活'],
@@ -87,15 +88,37 @@ export default {
         raw.pool ||= JSON.parse(JSON.stringify(DEFAULT_POOL))
         raw.history ||= []
         raw.novel ||= { title: '', parts: [] }
-        raw.state ||= { lastWokeAt: 0, nextWakeAt: 0, nextWakeBy: '', day: '', doneCount: 0, perJoy: {}, lastShareAt: 0 }
-        if (raw.state.day !== dayKey(Date.now())) raw.state = { ...raw.state, day: dayKey(Date.now()), doneCount: 0 }
+        raw.state ||= { lastWokeAt: 0, nextWakeAt: 0, nextWakeBy: '', day: '', doneCount: 0, perJoy: {}, lastShareAt: 0, lastJoyAt: 0 }
+        if (raw.state.day !== dayKey(Date.now())) {
+          raw.state = { ...raw.state, day: dayKey(Date.now()), doneCount: 0 }
+          // sharedToday 是「今天分享了几次」，跨天必须清；lastAt 是兴趣衰减用的，要留着
+          for (const pj of Object.values(raw.state.perJoy || {})) delete pj.sharedToday
+        }
         return raw
       } catch {
         return { pool: JSON.parse(JSON.stringify(DEFAULT_POOL)), history: [], novel: { title: '', parts: [] }, state: { lastWokeAt: 0, nextWakeAt: 0, nextWakeBy: '', day: dayKey(Date.now()), doneCount: 0, perJoy: {}, lastShareAt: 0 } }
       }
     }
     let st = load()
-    const save = () => { try { writeFileSync(file(), JSON.stringify(st, null, 1) + '\n', 'utf8') } catch (e) { api.log.warn?.(`[livin] 存档失败：${e.message}`) } }
+    // 跨天检查：st 常驻内存，load() 里那个比较只在启动时跑一次——进程不重启，第二天
+    // doneCount 还挂在昨天的数上，额度就永远「用完」了。每轮开头都查一次。
+    const rollDay = () => {
+      const today = dayKey(Date.now())
+      if (st.state.day === today) return false
+      st.state = { ...st.state, day: today, doneCount: 0 }
+      for (const pj of Object.values(st.state.perJoy || {})) delete pj.sharedToday
+      api.log?.debug?.('[livin] 新的一天，额度和分享次数已重置')
+      return true
+    }
+    // 存盘要走临时文件 + rename：直接覆盖 livin.json，写到一半崩了整个文件就废，
+    // load() 会静默回默认，一天的记录全没。
+    const save = () => {
+      try {
+        const tmp = `${file()}.tmp`
+        writeFileSync(tmp, JSON.stringify(st, null, 1) + '\n', 'utf8')
+        renameSync(tmp, file())
+      } catch (e) { api.log.warn?.(`[livin] 存档失败：${e.message}`) }
+    }
 
     const record = (event, extra = {}) => {
       st.history.push({ at: Date.now(), event, ...extra })
@@ -278,6 +301,7 @@ export default {
       if (r.ok) {
         // 额度和兴趣时间只算真正完成的——失败的那次不扣额度、不触发衰减
         st.state.doneCount += 1
+        st.state.lastJoyAt = Date.now()
         const pj = st.state.perJoy[item.id] = st.state.perJoy[item.id] || { lastAt: 0, sharedToday: 0 }
         pj.lastAt = Date.now()
       }
@@ -309,6 +333,7 @@ export default {
     const tick = async () => {
       const c = cfg()
       if (!c.enabled) return
+      if (rollDay()) save()
       const now = Date.now()
       if (inQuiet(now)) return record('skipped', { gate: '睡觉时段' })
       const lastOwner = Number(api.core?.hub?.lastOwnerChatAt || 0)
@@ -341,8 +366,13 @@ export default {
         execute: async ({ what } = {}) => {
           const c = cfg()
           if (!c.enabled) return { ok: false, message: '过日子开关没开。' }
-          if (st.state.doneCount >= c.dailyMax) return { ok: false, message: `今天已经玩了${st.state.doneCount}次，歇了。` }
+          if (rollDay()) save()
           const now = Date.now()
+          if (st.state.doneCount >= c.dailyMax) return { ok: false, message: `今天已经玩了${st.state.doneCount}次，歇了。` }
+          if (now - Number(st.state.lastJoyAt || 0) < JOY_DO_GAP) {
+            const wait = Math.ceil((JOY_DO_GAP - (now - Number(st.state.lastJoyAt || 0))) / MIN)
+            return { ok: false, message: `刚玩过一回，歇${wait}分钟再来吧。` }
+          }
           const pool = st.pool.filter((p) => p.on)
           const item = (what && pool.find((p) => p.name === what || p.id === what)) ||
             pool.slice().sort((a, b) => weightOf(b, now) - weightOf(a, now))[0]
@@ -350,6 +380,7 @@ export default {
           const r = await runJoy(item, what)
           if (r.ok) {
             st.state.doneCount += 1
+            st.state.lastJoyAt = Date.now()
             const pj = st.state.perJoy[item.id] = st.state.perJoy[item.id] || {}
             pj.lastAt = Date.now()
           }

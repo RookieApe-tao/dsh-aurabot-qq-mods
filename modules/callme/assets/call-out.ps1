@@ -1,4 +1,4 @@
-# 主动打 QQ 语音通话：UI 自动化打开聊天 -> 点「语音通话」
+﻿# 主动打 QQ 语音通话：UI 自动化打开聊天 -> 点「语音通话」
 # 用法：powershell -ExecutionPolicy Bypass -File call-out.ps1 [-Contact "花辞树"]
 param(
   [string]$Contact = "",
@@ -106,8 +106,8 @@ foreach ($e in $all) {
     if ($score -gt $best) { $target = $e; $best = $score }
   } catch {}
 }
-if (-not $target) { Log "会话列表里找不到「$Contact」，请先手动打开一次和 TA 的聊天"; exit 3 }
-if (Click-Element $target) { Log "已点击会话「$($target.Current.Name)」" } else { Log "点不开会话项"; exit 4 }
+if (-not $target) { Log "会话列表里找不到「${Contact}」，请先手动打开一次和 TA 的聊天"; exit 3 }
+if (Click-Element $target) { Log ("已点击会话「" + $target.Current.Name + "」") } else { Log "点不开会话项"; exit 4 }
 Start-Sleep -Milliseconds $WaitMs
 
 # 3) 点「语音通话」
@@ -123,7 +123,7 @@ if (-not $callBtn) {
 }
 if (-not $callBtn) { Log "没找到「语音通话」按钮"; exit 5 }
 if ($DryRun) { Log "（演练）找到「语音通话」按钮，不点"; exit 0 }
-if (Click-Element $callBtn) { Log "已发起语音通话 -> $Contact" } else { Log "点不动「语音通话」"; exit 6 }
+if (Click-Element $callBtn) { Log "已发起语音通话 -> ${Contact}" } else { Log "点不动「语音通话」"; exit 6 }
 
 # 4) 群通话的「选择成员」对话框：搜索并勾选要拉进来的人，再点确定
 function Set-SearchText($box, $text) {
@@ -175,7 +175,7 @@ if ($Invite) {
   if (-not $dlgOk) {
     Log "没有「选择成员」对话框（可能是私聊，直接拨出去了）"
   } else {
-    Log "弹出选择成员对话框，开始勾选「$Invite」"
+    Log "弹出选择成员对话框，开始勾选「${Invite}」"
     $left = [int]($qqWin.Current.BoundingRectangle.X)
     $names = @($Invite -split '[,，、\s]+' | Where-Object { $_ })
     $qns = @($InviteQQ -split '[,，、\s]+' | Where-Object { $_ })
@@ -207,7 +207,7 @@ if ($Invite) {
           $rows = Get-DialogRows $qqWin $left
         }
 
-        if ($rows.Count -eq 0) { Log "搜不到成员「$nm」"; continue }
+        if ($rows.Count -eq 0) { Log "搜不到成员「${nm}」"; continue }
 
         # 依旧多个：优先名字完全一致的
         $row = $null

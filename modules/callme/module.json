@@ -1,7 +1,7 @@
 {
   "id": "callme",
   "name": "语音通话",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "在 Windows 上用自己的 QQ 账号拨 QQ 语音通话：私聊通话、群语音（把 @ 她的人一起拉进来）、随时挂断。",
   "category": "social",
   "tags": [

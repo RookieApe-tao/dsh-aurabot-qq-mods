@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseList, parseHome, parsePost, createTieba, cleanTitle } from '../lib/tieba.mjs';
+import { parseList, parseHome, parsePost, parseMobileList, parseMobilePost, createTieba, cleanTitle } from '../lib/tieba.mjs';
 import sessionHelpers from '../lib/session.cjs';
 const fixture = name => readFileSync(new URL('fixtures/' + name, import.meta.url), 'utf8');
 test('post title uses only document title or clean thread heading, never SVG icon titles',()=>{
@@ -31,6 +31,45 @@ test('modern and commented legacy forums; modern post excludes scripts and neste
   const imageOnly = parsePost('<title>图片帖</title><div class="pb-content-wrap"><img src="/x.png"></div>', 'url');
   assert.match(imageOnly.posts[0].text, /未识别图片/);
   assert.throws(() => parsePost('<title>百度安全验证</title>', 'url'), /安全验证/);
+});
+
+test('mobile list and post pages are server-rendered and parse without a browser', () => {
+  const list = parseMobileList(fixture('mobile-list.html'));
+  assert.equal(list.length, 2);
+  assert.equal(list[0].title, '手机版置顶标题');
+  assert.equal(list[0].url, 'https://tieba.baidu.com/p/12345678');
+  const post = parseMobilePost(fixture('mobile-post.html'), 'https://tieba.baidu.com/p/12345678');
+  assert.equal(post.title, '手机版帖子标题');
+  assert.equal(post.posts.length, 2);
+  assert.equal(post.posts[0].author, '楼主甲');
+  assert.equal(post.posts[0].section, '楼主正文');
+  assert.equal(post.posts[0].text, '楼主正文 第二行');
+  assert.equal(post.posts[1].text, '回复内容');
+});
+
+test('桌面页只有 SPA 空壳时，列表和正文自动回退手机版服务端渲染页面', async () => {
+  const calls = [];
+  const seenUa = [];
+  const client = createTieba({ getCookie: () => '', browserAvailable: () => false, searchWeb: async () => ({ sources: [] }),
+    fetchImpl: async (url, init) => {
+      const path = new URL(String(url)).pathname;
+      calls.push(path);
+      seenUa.push(String(init.headers['user-agent']));
+      if (path === '/f') return new Response('<title>百度贴吧</title><div id="root"></div>');
+      if (path === '/mo/q/threadlist') return new Response(fixture('mobile-list.html'));
+      if (path === '/p/12345678') return new Response('<title>百度贴吧</title><div id="root"></div>');
+      if (path === '/mo/q/thread_page') return new Response(fixture('mobile-post.html'));
+      return new Response('', { status: 404 });
+    } });
+  const list = await client.browse('测试');
+  assert.equal(list.mode, 'mobile');
+  assert.equal(list.items.length, 2);
+  const post = await client.read('https://tieba.baidu.com/p/12345678');
+  assert.equal(post.ok, true);
+  assert.equal(post.mode, 'mobile');
+  assert.equal(post.posts.length, 2);
+  assert.deepEqual(calls, ['/f', '/mo/q/threadlist', '/p/12345678', '/mo/q/thread_page']);
+  assert.match(seenUa[1], /Android|Mobile/);
 });
 
 test('browser HTML parsing and account check use the same browser reader; search falls back through browser', async () => {

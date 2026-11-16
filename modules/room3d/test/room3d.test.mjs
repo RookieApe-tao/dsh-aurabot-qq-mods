@@ -5,7 +5,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, mkdtempSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, mkdtempSync, existsSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -153,6 +153,64 @@ test('下载落位：假 fetchZip → assets 目录有视频，anims 列表可�
   const h = await routes['/health']()
   assert.equal(h.assets.ready, true)
   assert.equal(h.assets.count, 2)
+})
+
+test('Windows 风格 zip（反斜杠路径）也能正确落位到 assets/，页面按名字能取到', async () => {
+  const zip = buildZip([
+    { name: 'room3d-assets\\待机呼吸休闲.webm', data: Buffer.from('fake-idle') },
+    { name: 'room3d-assets\\螃蟹走路.webm', data: Buffer.from('fake-walk') },
+  ])
+  const { api, routes, dataDir } = makeApi({
+    settings: { roomAssetUrl: 'https://example.com/room3d-assets.zip' },
+    hooks: { skipAutoAssets: true, fetchZip: async () => zipRes(zip) },
+  })
+  mod.default.setup(api)
+  const r = await routes['/api/room/fetch-assets']({ method: 'POST' })
+  assert.equal(r.ok, true)
+  assert.equal(r.count, 2)
+  // 关键：文件名里不能残留反斜杠，否则页面请求 /assets/待机呼吸休闲.webm 会 404，只剩影子
+  assert.ok(existsSync(join(dataDir, 'assets', '待机呼吸休闲.webm')))
+  assert.ok(existsSync(join(dataDir, 'assets', '螃蟹走路.webm')))
+  assert.ok(!readdirSync(join(dataDir, 'assets')).some((n) => n.includes('\\')), '不能留下带反斜杠的文件名')
+  assert.ok(routes['/assets/待机呼吸休闲.webm'], '页面请求的素材路由已按正常文件名注册')
+  const h = await routes['/health']()
+  assert.equal(h.assets.ready, true)
+})
+
+test('旧版错误落位的反斜杠素材名在启动时自动修正，不用重新下载', async () => {
+  const { api, routes, dataDir } = makeApi({ hooks: { skipAutoAssets: true } })
+  mkdirSync(join(dataDir, 'assets'), { recursive: true })
+  writeFileSync(join(dataDir, 'assets', 'room3d-assets\\待机呼吸休闲.webm'), 'old-idle')
+  mod.default.setup(api)
+  assert.ok(existsSync(join(dataDir, 'assets', '待机呼吸休闲.webm')), '启动时应把旧文件名改正')
+  assert.ok(!readdirSync(join(dataDir, 'assets')).some((n) => n.includes('\\')))
+  assert.ok(routes['/assets/待机呼吸休闲.webm'], '修正后素材路由要跟着注册')
+})
+
+test('下载失败时 /health 暴露 lastError 和镜像/重试提示', async () => {
+  const { api, routes } = makeApi({
+    settings: { roomAssetUrl: 'https://example.com/room3d-assets.zip' },
+    hooks: { skipAutoAssets: true, fetchZip: async () => { throw new Error('模拟网络失败') } },
+  })
+  mod.default.setup(api)
+  const r = await routes['/api/room/fetch-assets']({ method: 'POST' })
+  assert.equal(r.ok, false)
+  assert.match(String(r.message), /素材包下载失败.*模拟网络失败/)
+  const h = await routes['/health']()
+  assert.equal(h.assets.ready, false)
+  assert.match(String(h.assets.lastError), /模拟网络失败/)
+  assert.match(String(h.assets.hint), /镜像|重新下载/)
+})
+
+test('面板提供素材状态与重新下载按钮，页面有素材加载失败提示', () => {
+  const panel = readFileSync(join(MOD, 'panel.js'), 'utf8')
+  assert.match(panel, /health/)
+  assert.match(panel, /fetch-assets/)
+  assert.match(panel, /重新下载素材/)
+  const page = readFileSync(join(MOD, 'lib', 'index3d.html'), 'utf8')
+  assert.match(page, /assetWarn/)
+  assert.match(page, /addEventListener\('error'/)
+  assert.match(page, /动作素材加载失败/)
 })
 
 test('明文 http 下载地址被拒绝', async () => {

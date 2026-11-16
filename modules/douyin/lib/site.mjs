@@ -88,6 +88,27 @@ export function parseComments(json, max = 8) {
     .slice(0, max)
 }
 
+/**
+ * 某条评论的回复列表接口（/comment/list/reply/）→ 从旧到新 [{id, uid, nickname, text, replyId, replyToReplyId, at, likes}]。
+ * 只看有 cid 和正文的；时间用毫秒，方便和「只接最近多久」比较。
+ */
+export function parseReplies(json, max = 20) {
+  return (json?.comments || [])
+    .map((c) => ({
+      id: String(c.cid || ''),
+      uid: String(c.user?.uid || ''),
+      nickname: clean(c.user?.nickname, 40),
+      text: clean(c.text, 300),
+      replyId: String(c.reply_id || ''),
+      replyToReplyId: String(c.reply_to_reply_id || ''),
+      at: num(c.create_time) * 1000,
+      likes: num(c.digg_count),
+    }))
+    .filter((c) => c.id && c.text)
+    .sort((a, b) => a.at - b.at)
+    .slice(-max)
+}
+
 const wan = (n) => (n >= 10000 ? (n / 10000).toFixed(n >= 100000 ? 0 : 1) + '万' : String(n))
 
 /** 一个视频交给她看的样子：标题、作者、数据、分类、摘要 / 章节、文案、音乐、热评。 */
@@ -169,6 +190,11 @@ export function createSite({ browser, log }) {
 
   async function comments(id) {
     return parseComments(await api('/aweme/v1/web/comment/list/', { aweme_id: id, cursor: 0, count: 20, item_type: 0 }))
+  }
+
+  /** 某条评论下面的回复（含主人回复她的那条）。接口用 item_id，评论列表接口用 aweme_id，名字不一样。 */
+  async function replies(id, commentId, { cursor = 0, count = 20 } = {}) {
+    return parseReplies(await api('/aweme/v1/web/comment/list/reply/', { item_id: id, comment_id: commentId, cursor, count, item_type: 0 }), count)
   }
 
   /** 现在有没有验证码；有就返回原因。 */
@@ -495,6 +521,20 @@ export function createSite({ browser, log }) {
     return list
   }
 
+  /**
+   * 给一个已经核对过的人发一条纯文字私信：先按 uid 打开会话（列表里没有就从主页发起），再发。
+   * 和 dms() 分开是为了让调用方看清「这是发给谁的」，不会误发到当前打开的会话里。
+   * text 为空直接拒绝；返回 sendDm() 的结果（不确定时抛 code=dm_uncertain）。
+   */
+  async function dm(uid, text, { secUid = '' } = {}) {
+    const want = String(uid || '')
+    const say = String(text ?? '').trim()
+    if (!want) throw new Error('要发给谁？没有核对过对方的抖音 uid')
+    if (!say) throw new Error('私信内容是空的')
+    await openChat(want, { secUid })
+    return sendDm(say)
+  }
+
   /** 在当前打开的会话里发一条私信：清空输入框、打字、回车（页面在后台时按键照样送得到），等私信接口发送成功。 */
   async function sendDm(text) {
     const ok = await b.evaluate(`(() => {
@@ -634,5 +674,5 @@ export function createSite({ browser, log }) {
     return { ok: true, loggedIn: false, shot: await loginShot() }
   }
 
-  return { ensure, self, user, profileOf, findByDouyinId, feed, detail, comments, verify, watch, like, comment, share, dms, sendDm, screenshot: () => b.screenshot().catch(() => ''), loginStart, loginPoll, show: (v) => b.show(v), connected: () => b.connected() }
+  return { ensure, self, user, profileOf, findByDouyinId, feed, detail, comments, replies, verify, watch, like, comment, share, dms, dm, sendDm, screenshot: () => b.screenshot().catch(() => ''), loginStart, loginPoll, show: (v) => b.show(v), connected: () => b.connected() }
 }

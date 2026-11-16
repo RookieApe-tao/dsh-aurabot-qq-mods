@@ -3,22 +3,26 @@ const __lib = globalThis.aurabot.lib // 插件内部源码（复制出来后靠�
 // 别人发来抖音链接，她也能点开看完再聊。浏览 / 点赞 / 评论 / 分享各有权限（面板「权限」页），默认仅主人。
 
 import { createDouyin } from './lib/duty.mjs'
+import { SHARE_TEXT_DEFAULTS, SHARE_TEXT_SETTINGS } from './lib/share-settings.mjs'
+import { COMMENT_REPLY_DEFAULTS, COMMENT_REPLY_SETTINGS } from './lib/reply-settings.mjs'
 const { defineTool, str } = __lib('tools/tools.js')
 const { profileToolVisible, profilePermits } = __lib('chat/access.js')
 
 export default {
   id: 'douyin',
   name: '刷抖音',
-  version: '2.3.6',
+  version: '2.3.8',
   api: 1,
   description: '用专用浏览器刷抖音：看推荐、点赞评论，把好玩的视频分享给主人，也能看别人发来的抖音链接。',
   tab: 'douyin',
+  defaults: { ...SHARE_TEXT_DEFAULTS, ...COMMENT_REPLY_DEFAULTS },
+  settings: [...SHARE_TEXT_SETTINGS, ...COMMENT_REPLY_SETTINGS],
   setup(api) {
     const { hub, http } = api.core
     // 主人的抖音号只由「核对」写入（面板存配置时不能直接改 secUid）
     const setOwner = (owner) => api.setConfig((cur) => ({ ...cur, douyin: { ...cur.douyin, owner } }))
     // 出站治理面：旧主仓没有 api.proactive 时为 undefined，duty 内部可选链降级回 hub.sendText。
-    const dy = createDouyin({ getConfig: api.config, setOwner, hub, memory: api.lazy('memory'), log: api.log, proactive: api.proactive })
+    const dy = createDouyin({ getConfig: api.config, getSettings: api.settings, setOwner, hub, memory: api.lazy('memory'), log: api.log, proactive: api.proactive })
     api.every(60_000, () => dy.tick(), '刷抖音')
     api.onDispose(() => dy.dispose())
 
@@ -100,6 +104,7 @@ export default {
     })
     api.route('/douyin/run', async () => dy.browse())
     api.route('/douyin/dms', async () => dy.checkOwnerDms())
+    api.route('/douyin/comment-replies', async () => dy.checkCommentReplies('主人要求'))
     api.route('/douyin/confirm-owner', async (req) => {
       const b = await http.body(req).catch(() => ({}))
       return dy.confirmOwner(String(b?.input ?? api.config().douyin.owner.input ?? ''))

@@ -86,6 +86,42 @@ test('invalid mixed model output rolls back all records, billed request remains 
  ]}})})
  assert.equal((await w.runOne()).status,'failed');assert.equal(f.store.records(f.scope).length,0);assert.equal(f.store.usage().attempts,1)
 })
+
+test('background organization accepts a complete fenced result and retains the original evidence', async t => {
+ const f = fixture(t)
+ const event = f.event('如果明天还下雨，我不喝冰咖啡。')
+ f.store.enqueue(f.scope, { kind:'day', sources:[{ id:event.id, quote:event.body }], generation:1 })
+ const worker = new MemoryWorker(f.store, {
+  getSettings:() => f.config, getGeneration:() => 1, active:() => true,
+  model:async ({ input, reasoningEffort }) => {
+   assert.equal(reasoningEffort, 'off')
+   assert.equal(input.events[0].text, event.body)
+   const result = { records:[{ kind:'fact', attribute:'饮品偏好', text:event.body, domain:'real', sources:[1] }] }
+   return { output:['```json', JSON.stringify(result), '```'].join('\n'), usage:{ inputTokens:250, outputTokens:81 } }
+  },
+ })
+ assert.equal((await worker.runOne()).status, 'complete')
+ assert.equal(f.store.records(f.scope)[0].body, event.body)
+})
+
+test('incomplete output at the cap is counted and retains evidence without an automatic retry', async t => {
+ const f = serviceFixture(t)
+ await enable(f.service)
+ const scope = f.service.scope({ persona:'alice', audience:'private', subject:'user1' })
+ const { event } = f.service.ingest(scope, { sourceId:'organizer-fixture', role:'user', actor:'user1', text:'我不喝冰咖啡。', at:f.service.now() })
+ const job = f.service.store.enqueue(scope, { kind:'day', sources:[{ id:event.id, quote:event.body }], generation:f.service.generation() })
+ f.service.model = async () => ({ output:'{"records":[{"text":"', usage:{ inputTokens:200, outputTokens:f.config.maxOutputTokens } })
+ assert.equal((await f.service.worker().runOne()).status, 'failed')
+ assert.equal((await f.service.worker().runOne()).status, 'idle')
+ assert.equal(f.service.store.usage().attempts, 1)
+ assert.equal(f.service.store.records(scope).length, 0)
+ assert.equal(f.service.store.event(event.id).body, event.body)
+ const reasons = [{ label:'输出达到单次上限，回复未完整返回', count:1 }]
+ assert.deepEqual(f.service.state().failureReasons, reasons)
+ f.service.store.finishJob(job.id, 'failed', 'Unterminated string in JSON at position 21')
+ assert.deepEqual(f.service.state().failureReasons, reasons)
+})
+
 test('reset while a model request is in flight cannot repopulate new epoch',async t=>{
  const f=fixture(t),e=f.event(),sources=[{id:e.id,quote:e.body}]
  f.store.enqueue(f.scope,{kind:'day',sources,generation:1})

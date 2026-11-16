@@ -1,7 +1,7 @@
 {
   "id": "tieba-reader",
   "name": "逛贴吧（只读）",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "只读搜索和浏览贴吧，也可按兴趣向主人私聊分享。",
   "category": "platform",
   "tags": ["贴吧", "只读"],

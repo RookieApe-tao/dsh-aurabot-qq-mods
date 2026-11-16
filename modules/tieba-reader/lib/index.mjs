@@ -4,7 +4,7 @@ import { createTieba, barNames, clean, cleanTitle } from './tieba.mjs';
 import { createBrowserReader } from './browser-client.mjs';
 
 export default {
-  id: 'tieba-reader', name: '逛贴吧（只读）', version: '1.5.3', api: 1,
+  id: 'tieba-reader', name: '逛贴吧（只读）', version: '1.5.4', api: 1,
   description: '支持登录 Cookie、搜帖看帖、配置贴吧定时浏览，有兴趣时给主人分享；不发帖、不回帖。',
   panel: 'panel.js',
   defaults: { enabled: true, cookie: '', bars: '', interests: '', autoBrowse: false, intervalMinutes: 30, maxSharesPerDay: 3, startHour: 9, endHour: 23 },
@@ -53,7 +53,7 @@ export default {
         api.defineTool({ name: 'tieba_reader_status', description: '检查贴吧读取模块的当前版本和读取方式。历史消息说读不到时，可先检查状态后重新读帖，不沿用旧失败结论。',
           execute: async () => {
             const current = api.use('tieba-reader');
-            return { ok: true, message: '贴吧模块 ' + current.version + (current.browserStatus?.().available === false ? '，未检测到内置组件，将尝试使用手动 Cookie 直接读取；系统浏览器登录不能自动同步。' : '，使用内置浏览器会话读取。') + '请调用 tieba_read 获取当前结果，不沿用历史失败结论。' };
+            return { ok: true, message: '贴吧模块 ' + current.version + (current.browserStatus?.().available === false ? '，未检测到内置组件，将使用手机版服务端页面直接读取（登录可用手动 Cookie）；系统浏览器登录不能自动同步。' : '，使用内置浏览器会话读取。') + '请调用 tieba_read 获取当前结果，不沿用历史失败结论。' };
           } }),
       ];
     });
@@ -172,6 +172,6 @@ export default {
       const result = await tieba[method](...args);
       return api.settings().enabled === false || disposed ? blocked('贴吧功能已关闭') : result;
     };
-    return { version: '1.5.2', tick, run, search: enabledRead('search'), browse: bar => String(bar || '').trim() ? enabledRead('browse')(bar) : enabledRead('home')(), read: enabledRead('read'), browserStatus: () => browser.status?.() || {}, state: () => ({ ...state }) };
+    return { version: '1.5.4', tick, run, search: enabledRead('search'), browse: bar => String(bar || '').trim() ? enabledRead('browse')(bar) : enabledRead('home')(), read: enabledRead('read'), browserStatus: () => browser.status?.() || {}, state: () => ({ ...state }) };
   },
 };

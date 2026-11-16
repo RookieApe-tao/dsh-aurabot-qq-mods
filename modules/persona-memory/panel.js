@@ -34,7 +34,7 @@ return function Panel(){
  const resetScopes=(data?.scopes||[]).filter(s=>s.persona===resetPersona),chatScopes=resetScopes.filter(s=>s.audience!=='system'),resetSelected=resetScopes.find(s=>s.key===selection)
  const resetValid=resetRange==='all'||resetRange==='persona'&&resetScopes.length>0||['conversation','experience'].includes(resetRange)&&resetSelected&&(resetRange==='experience'||resetSelected.audience!=='system')
  const resetDescription=resetRange==='all'?'所有角色的全部互动记忆':resetRange==='persona'?`${roleName(resetPersona)}的全部互动记忆（包括聊天和角色经历）`:resetSelected?`${roleName(resetPersona)}与${scopeName(resetSelected)}有关的互动`:'请先选择要重新开始的聊天'
- const stateLabels={never:'未启用，原有记忆按原设置运行',preparing:'正在准备接管',active:'已启用，人设记忆管理统一处理',native:'增强已关闭，原生记忆已接续；原记忆与人物页面可用，详细档案仍在本页。',switching:'正在交接记忆',paused:'已暂停，资料保留；聊天暂不使用长期记忆',pausing:'正在停用，等待旧上下文清理',recovery:'交接尚未完成，档案保留；可重新接续或明确暂停'}
+ const stateLabels={never:'未启用，原有记忆按原设置运行',preparing:'正在准备接管',active:'增强记忆暂未就绪，请刷新状态',native:'增强已关闭，原生记忆已接续；原记忆与人物页面可用，详细档案仍在本页。',switching:'正在交接记忆',paused:'已暂停，资料保留；聊天暂不使用长期记忆',pausing:'正在停用，等待旧上下文清理',recovery:'交接尚未完成，档案保留；可重新接续或明确暂停'}
  function changeScope(value){serial.current++;S(value);R([]);C(null);V(null);P(null)}
  async function search(nextArchive=archive,nextCursor=null){
   if(!scope)return
@@ -59,7 +59,7 @@ return function Panel(){
    message?h('p',{role:'alert'},message):null))
  return h('div',{className:'pm-panel',ref:panelRef},h('style',null,styles),
   h('div',{className:'pm-row'},h('h3',null,'人设记忆管理'),h('label',{className:'pm-row'},'开启',h('input',{type:'checkbox',className:'pm-switch',role:'switch','aria-label':'开启人设记忆管理',checked:data.active,disabled:busy,onChange:run(toggle)}))),
-  h('div',{className:'pm-status',role:'status'},stateLabels[state]||'状态待核对'),
+  data.active?null:h('div',{className:'pm-status',role:'status'},stateLabels[state]||'状态待核对'),
   handoff?h('div',{className:'pm-box',role:'dialog','aria-label':'关闭增强并接续原生'},h('strong',null,'关闭增强，接续原生记忆'),hint(`可用于原生召回 ${handoff.projected} 条；完整保留但仅存档 ${handoff.archiveOnly} 条。`),...(handoff.impact||[]).map(v=>hint(v)),h('div',{className:'pm-row'},button('确认接续原生',async()=>{const r=await call('/native-activate',{token:handoff.token});if(r.ok)HO(null);await load();return r}),button('取消',()=>HO(null)))):null,
   message?h('div',{className:'pm-status '+(/失败|缺少|未完成|不足|过期|错误/.test(message)?'pm-error':''),role:'alert'},message):null,
   h('nav',{className:'pm-row pm-tabs','aria-label':'记忆模块页面'},...[["settings","设置"],["memory","记忆"],["people","人物"]].map(([id,label])=>h('button',{type:'button',className:'ab-btn',key:id,'aria-pressed':tab===id,onClick:()=>T(id)},label))),
@@ -68,7 +68,11 @@ return function Panel(){
    h('div',{className:'pm-fields pm-stats'},h('div',{className:'pm-box'},hint('长期记忆'),h('span',{className:'pm-count'},data.scopes.reduce((n,s)=>n+s.counts.records,0))),h('div',{className:'pm-box'},hint(state==='native'?'今日原生整理请求':'今日增强整理请求'),h('span',{className:'pm-count'},state==='native'?`${data.nativeUsage?.attempts||0} 次`:`${data.usage.attempts} / ${cfg.extraAttempts}`),hint(state==='native'?'按原生设置运行，增强预算未应用。':'次数与输入、输出分别检查；成功请求按完整实际用量结算。'))),
    h('section',{className:'pm-settings-card'},h('h3',{className:'pm-section-title'},'回忆方式'),field('用量模式',select(cfg.mode,v=>F(d=>({...d,mode:v})),[['balanced','常规'],['economy','节省'],...(cfg.mode==='custom'?[['custom','自定义']]:[])]),`常规最多每日16次，单次输出1600；节省最多每日8次，单次输出1000。都是上限，不会为了用满额度而整理。`),field('回忆表达',select(cfg.expression,v=>F(d=>({...d,expression:v})),[['persona','跟随人设'],['direct','直白说明']]),'记不清时如何表达，不改变记忆本身。')),
    hint(state==='native'?'当前按原生设置运行；本页增强选项供下次开启时使用，增强额度与白名单不会限制原生。人物停记、遗忘和隐私保护继续有效。':'启用后自动整理重复内容，旧事优先回忆概括；重要约定和当前有效的偏好仍会保留。'),
-   (state==='active'||data.health?.attention)&&data.budget?h('div',{className:'pm-status'},state==='native'?'历史增强整理：'+(data.health?.message||''):(data.health?.message||'正在读取整理任务状态。'),data.budget.waiting?.length?hint(data.budget.waiting[0].reason):null,hint(`增强剩余：${data.budget.remaining.attempts}次，输入 ${data.budget.remaining.inputTokens}，输出 ${data.budget.remaining.outputTokens}；每日北京时间零点重新计算。`)):null,
+   (state==='active'||data.health?.attention)&&data.budget?h('div',{className:'pm-status'},
+    state==='native'?'历史增强整理：'+(data.health?.message||''):(data.health?.message||'正在读取整理任务状态。'),
+    ...(data.failureReasons||[]).map(({label,count})=>h('p',{className:'pm-muted',key:label},`${label}（${count} 项）`)),
+    data.budget.waiting?.length?hint(data.budget.waiting[0].reason):null,
+    hint(`增强剩余：${data.budget.remaining.attempts}次，输入 ${data.budget.remaining.inputTokens}，输出 ${data.budget.remaining.outputTokens}；每日北京时间零点重新计算。`)):null,
    data.budget?.oversized?hint(`${data.budget.oversized} 条长内容尚未自动整理，原文暂时保留；可在记忆页查看并手动添加要点。`):null,
    data.budget?.unavailableSources?hint(`${data.budget.unavailableSources} 条历史长内容的完整原文已到期，不能从本模块恢复；请从仍保留的聊天记录补充。`):null,
    cfg.mode==='balanced'&&(cfg.extraAttempts!==16||cfg.maxOutputTokens!==1600)?button('使用新版常规额度',()=>F(d=>({...d,mode:'balanced'}))):null,
@@ -87,7 +91,6 @@ return function Panel(){
     hint('原话保留与检索均在本地进行。只有新增内容整理使用额外模型请求；用量未知时保守计入预占。'),
     data.pendingResets?.length?h('div',{className:'pm-stack'},...data.pendingResets.map(r=>h('div',{className:'pm-box',key:r.id},hint('未完成的清理：'+r.error),button('继续完成清理',async()=>{const result=await call('/reset-resume',{id:r.id});await load();return result})))):null
    )),
-   data.compatibility?h('details',{className:'pm-fold'},h('summary',null,'与其他模块一起使用'),h('div',{className:'pm-fold-body'},hint(data.compatibility.rule),...data.compatibility.rows.map(m=>h('div',{className:'pm-box',key:m.id},h('strong',null,`${m.name} · ${m.status}`),hint(`${m.installed?(m.active?'正在运行':'已停用'):'未安装'}${m.version?' · '+m.version:''}`),hint(m.note))))):null,
    h('div',{className:'pm-row'},button('保存设置',save,!Object.keys(draft).length),button('刷新状态',load),state!=='never'&&state!=='paused'?button('暂停所有长期记忆',async()=>{const r=await call('/pause',{});await load();return r}):null,['paused','recovery'].includes(state)?button('切回原生记忆',async()=>{const r=await call('/native-preview',{});if(r.ok)HO(r);return r}):null),
    h('details',{className:'pm-fold pm-danger'},h('summary',null,'重新开始互动'),h('div',{className:'pm-fold-body'},hint('清除互动形成的记忆、人物印象和旧会话上下文，选择“这个角色的全部互动”。人设卡和设置保留；设定里写好的称呼、关系仍会生效。'),
     field('选择角色',select(resetPersona,value=>{RP(value);changeScope('')},roleOptions)),

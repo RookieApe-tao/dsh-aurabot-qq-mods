@@ -1,6 +1,6 @@
 {
   "name": "aurabot-local-diary",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "私人日记：每天写一篇 md 到本地文件夹，写给她自己看",

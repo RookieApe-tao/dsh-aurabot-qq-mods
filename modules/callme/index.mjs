@@ -16,7 +16,7 @@ const PS = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
 export default {
   id: 'callme',
   name: '语音通话',
-  version: '1.0.0',
+  version: '1.0.1',
   api: 1,
   description: 'Windows 上用自己的 QQ 拨语音通话：私聊通话、群语音（自动把 @ 她的人拉进来）、随时挂断',
   defaults: { contact: '', cooldownSec: 60, enabled: false, groupCall: true },

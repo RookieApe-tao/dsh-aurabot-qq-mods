@@ -4,7 +4,7 @@ import { createTieba, barNames, clean, cleanTitle } from './tieba.mjs';
 import { createBrowserReader } from './browser-client.mjs';
 
 export default {
-  id: 'tieba-reader', name: '逛贴吧（只读）', version: '1.5.4', api: 1,
+  id: 'tieba-reader', name: '逛贴吧（只读）', version: '1.5.5', api: 1,
   description: '支持登录 Cookie、搜帖看帖、配置贴吧定时浏览，有兴趣时给主人分享；不发帖、不回帖。',
   panel: 'panel.js',
   defaults: { enabled: true, cookie: '', bars: '', interests: '', autoBrowse: false, intervalMinutes: 30, maxSharesPerDay: 3, startHour: 9, endHour: 23 },
@@ -172,6 +172,6 @@ export default {
       const result = await tieba[method](...args);
       return api.settings().enabled === false || disposed ? blocked('贴吧功能已关闭') : result;
     };
-    return { version: '1.5.4', tick, run, search: enabledRead('search'), browse: bar => String(bar || '').trim() ? enabledRead('browse')(bar) : enabledRead('home')(), read: enabledRead('read'), browserStatus: () => browser.status?.() || {}, state: () => ({ ...state }) };
+    return { version: '1.5.5', tick, run, search: enabledRead('search'), browse: bar => String(bar || '').trim() ? enabledRead('browse')(bar) : enabledRead('home')(), read: enabledRead('read'), browserStatus: () => browser.status?.() || {}, state: () => ({ ...state }) };
   },
 };

@@ -4,10 +4,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 const host = join(process.env.AURABOT_PLUGIN_DIR || '', 'client', 'client.js');
 test('custom panel draft updates reach the shared host draft and preserve other configuration', {skip: !existsSync(host)},()=>{
-  const code=readFileSync(host,'utf8');const start=code.indexOf('    function ExtPage(');const end=code.indexOf('\n    const BILI_KIND',start);
-  assert.ok(start>=0&&end>start);
+  const code = readFileSync(host, 'utf8');
+  // 取到 ExtPage 自己的结束括号，避免把后续同级声明一起编译。
+  const pageSource = code.match(/^    function ExtPage\([\s\S]*?^    \}(?=\r?$)/m)?.[0];
+  assert.ok(pageSource, '宿主源码应包含完整的 ExtPage 函数');
   const h=(type,props,...children)=>({type,props,children});
-  const ExtPage=new Function('useField','h','Empty','Card','Row','ExtPanel','return ('+code.slice(start,end).trim()+')')(()=>({}),h,'Empty','Card','Row','ExtPanel');
+  const ExtPage=new Function('useField','h','Empty','Card','Row','ExtPanel','return ('+pageSource+')')(()=>({}),h,'Empty','Card','Row','ExtPanel');
   let draft={enabled:true,ext:{'tieba-reader':{bars:'old',cookie:''},other:{keep:true}}};const saved=structuredClone(draft);
   const tree=ExtPage({st:{config:saved,modules:[{id:'tieba-reader',defaults:{enabled:true},settings:[],panel:true}]},draft,setDraft:updater=>{draft=updater(draft);},toast(){},reload(){},mod:'tieba-reader'});
   const child=tree.children.find(n=>n&&n.type==='ExtPanel');assert.ok(child);assert.equal(child.props.draftSettings.bars,'old');

@@ -1,0 +1,22 @@
+{
+  "id": "member-info",
+  "name": "查群成员",
+  "version": "1.0.0",
+  "description": "查某个群里某位成员的身份：群角色（群主/管理员/成员）、群名片、专属头衔、加群时间、Q 龄、最后发言时间。数据全部来自本机 OneBot 网关，不访问任何外部网址。",
+  "category": "tool",
+  "tags": [
+    "群管理",
+    "成员",
+    "身份",
+    "查询"
+  ],
+  "platforms": [
+    "qq"
+  ],
+  "author": "community",
+  "license": "MIT",
+  "api": 1,
+  "minPluginVersion": "1.2.0",
+  "requires": [],
+  "capabilities": []
+}
